@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>미스테이블 - 스마트한 맛집 예약</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f9fafb; -webkit-tap-highlight-color: transparent; }
+        .theme-orange { background-color: #ff6b35; }
+        .text-theme-orange { color: #ff6b35; }
+        .border-theme-orange { border-color: #ff6b35; }
+        .hidden { display: none; }
+        .drag-over { background-color: #fff3cd !important; border: 2px dashed #ff6b35 !important; }
+        /* 하단 탭바 고정 스타일 */
+        .bottom-nav { border-top: 1px solid #e5e7eb; padding-bottom: calc(env(safe-area-inset-bottom) + 8px); }
+    </style>
+</head>
+<body class="text-gray-800 antialiased">
+
+<header class="theme-orange text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-xl mx-auto p-4 flex flex-col gap-3">
+        <div class="flex justify-between items-center">
+            <div onclick="switchTab('home')" class="text-2xl font-black cursor-pointer tracking-tight flex items-center gap-1">
+                <i class="fa-solid fa-utensils text-xl"></i> 미스테이블
+            </div>
+            <div class="flex items-center gap-2 text-xs font-medium opacity-90 bg-black/10 px-2 py-1 rounded-full">
+                <i class="fa-solid fa-location-dot"></i> <span id="current-location">부산광역시</span> ▼
+            </div>
+        </div>
+        <div class="relative">
+            <input type="text" id="global-search-input" onkeyup="if(event.key === 'Enter') handleGlobalSearch()" placeholder="지역, 맛집, 요리 종류를 검색해보세요!" class="w-full p-3 pl-10 rounded-xl text-black focus:outline-none text-sm shadow-inner placeholder-gray-400">
+            <span class="absolute left-3 top-3.5 text-gray-400"><i class="fa-solid fa-magnifying-glass text-sm"></i></span>
+            <button onclick="handleGlobalSearch()" class="absolute right-3 top-2.5 bg-[#ff6b35] text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow">검색</button>
+        </div>
+    </div>
+</header>
+
+<main class="max-w-xl mx-auto p-4 mb-24 min-h-[calc(100vh-180px)]">
+
+    <section id="tab-home">
+        <div class="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-5 text-white mb-6 shadow-sm relative overflow-hidden">
+            <div class="z-10 relative">
+                <span class="bg-black/20 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded">NOTICE</span>
+                <h3 class="text-xl font-bold mt-1">인기 맛집 즉시 예약</h3>
+                <p class="text-xs opacity-80 mt-1">기다림 없는 스마트한 미식 생활의 시작</p>
+            </div>
+            <i class="fa-solid fa-calendar-check absolute right-4 -bottom-2 text-7xl opacity-10 pointer-events-none"></i>
+        </div>
+
+        <div class="mb-6">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-lg font-black text-gray-900 flex items-center gap-1.5">
+                    <i class="fa-solid fa-fire text-red-500"></i> 미스테이블 추천 맛집
+                </h2>
+                <span class="text-xs text-gray-400 font-medium">실시간 핫플레이스</span>
+            </div>
+            <div id="recommended-restaurants" class="grid grid-cols-2 gap-3">
+                </div>
+        </div>
+
+        <div class="mb-6">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-lg font-black text-gray-900 flex items-center gap-1.5">
+                    <i class="fa-solid fa-heart text-pink-500"></i> 내가 찜한 관심 맛집
+                </h2>
+            </div>
+            <div id="favorite-restaurants" class="flex flex-col gap-3">
+                </div>
+        </div>
+    </section>
+
+    <section id="tab-category" class="hidden">
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h2 class="text-xl font-black text-gray-900">음식 종류 / 카테고리</h2>
+            <button onclick="showCategoryManageModal()" class="text-xs font-bold bg-gray-100 text-gray-600 px-2.5 py-1.5 rounded-lg border hover:bg-gray-200">
+                <i class="fa-solid fa-gear"></i> 분류 추가/편집
+            </button>
+        </div>
+        
+        <div id="category-tree-container" class="flex flex-col gap-4">
+            </div>
+    </section>
+
+    <section id="tab-search" class="hidden">
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h2 id="search-title-text" class="text-xl font-black text-gray-900">전체 맛집 리스트</h2>
+            <button onclick="showAddRestaurantModal()" class="theme-orange text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow">
+                <i class="fa-solid fa-plus"></i> 신규 맛집 등록
+            </button>
+        </div>
+        <div id="search-results-list" class="flex flex-col gap-4">
+            </div>
+    </section>
+
+    <section id="tab-mymystable" class="hidden">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center mb-4">
+            <div class="w-16 h-16 theme-orange rounded-full flex items-center justify-center text-white text-2xl font-black mx-auto mb-3 shadow-md">
+                MY
+            </div>
+            <h3 class="font-bold text-lg text-gray-800">미식가 회원님</h3>
+            <p class="text-xs text-gray-400 mt-0.5">실시간 가짜 예약 및 가짜 가맹점 테스트 계정</p>
+        </div>
+
+        <h3 class="font-bold text-gray-900 mb-3 flex items-center gap-1"><i class="fa-solid fa-clock-rotate-left text-orange-500"></i> 나의 실시간 예약 내역</h3>
+        <div id="my-reservation-history" class="flex flex-col gap-3">
+            </div>
+    </section>
+
+    <section id="restaurant-detail-view" class="hidden">
+        <div id="restaurant-detail-header-card" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+            </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
+            <div class="flex justify-between items-center border-b pb-2 mb-3">
+                <h3 class="font-black text-gray-900"><i class="fa-solid fa-utensils text-amber-500"></i> 매장 메뉴 리스트</h3>
+                <button onclick="showAddMenuModal()" class="text-xs bg-blue-500 text-white px-2.5 py-1 rounded font-bold shadow hover:bg-blue-600">
+                    <i class="fa-solid fa-plus"></i> 메뉴 신규 등록
+                </button>
+            </div>
+            <div id="restaurant-menu-list-container" class="flex flex-col gap-3">
+                </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
+            <h3 class="font-black text-gray-900 mb-3"><i class="fa-solid fa-calendar text-orange-500"></i> 실시간 가짜 예약 신청</h3>
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                    <label class="text-[11px] font-bold text-gray-400 block mb-1">방문 날짜 선택</label>
+                    <input type="date" id="reserve-date" class="w-full text-xs p-2 border rounded-lg bg-gray-50 focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-[11px] font-bold text-gray-400 block mb-1">방문 시간 선택</label>
+                    <select id="reserve-time" class="w-full text-xs p-2 border rounded-lg bg-gray-50 focus:outline-none">
+                        <option value="12:00">12:00 (런치를 시작합니다)</option>
+                        <option value="13:00">13:00</option>
+                        <option value="18:00">18:00 (디너를 시작합니다)</option>
+                        <option value="19:00">19:00</option>
+                        <option value="20:00">20:00</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="text-[11px] font-bold text-gray-400 block mb-1">방문 인원수 선택</label>
+                <div class="flex items-center gap-3 border rounded-lg p-2 bg-gray-50 justify-between">
+                    <span class="text-xs font-bold text-gray-600">총 인원 선택 (영유아 포함)</span>
+                    <div class="flex items-center gap-3">
+                        <button onclick="updatePeopleCount(-1)" class="w-6 h-6 border rounded-full bg-white flex items-center justify-center font-bold text-gray-400 shadow-sm">-</button>
+                        <span id="reserve-people-counter" class="text-sm font-bold text-gray-800">2</span>
+                        <button onclick="updatePeopleCount(1)" class="w-6 h-6 border rounded-full bg-white flex items-center justify-center font-bold text-orange-500 shadow-sm">+</button>
+                    </div>
+                </div>
+            </div>
+            <button onclick="triggerReservationSimulation()" class="w-full py-3 theme-orange text-white rounded-xl font-black shadow-md tracking-wide text-sm transition-transform active:scale-98">
+                🚀 즉시 예약 진행하기 (실제 예약 안 됨)
+            </button>
+        </div>
+
+        <button onclick="switchTab('search')" class="w-full py-3 bg-gray-200 text-gray-600 font-bold rounded-xl text-xs"><i class="fa-solid fa-arrow-left"></i> 매장 목록으로 돌아가기</button>
+    </section>
+
+    <section id="reservation-status-view" class="hidden text-center p-8 bg-white rounded-2xl shadow-md border border-gray-100 my-4">
+        <div class="text-5xl mb-4 animate-bounce">⏱️</div>
+        <h2 id="status-main-text" class="text-xl font-black mb-1 text-gray-800">예약 요청서 전송 완료</h2>
+        <p id="status-sub-text" class="text-xs text-gray-400 mb-6">가짜 예약 시뮬레이션 알고리즘이 작동 중입니다.</p>
+        
+        <div class="w-full bg-gray-100 h-3 rounded-full overflow-hidden mb-6 border">
+            <div id="simulation-progress-bar" class="theme-orange h-full transition-all duration-700" style="width: 0%"></div>
+        </div>
+        
+        <div id="simulation-step-indicator" class="text-xs font-bold text-orange-500 bg-orange-50 py-2 rounded-xl mb-6">
+            [1단계] 매장 좌석 배치 실시간 조회 중...
+        </div>
+
+        <button id="status-home-btn" onclick="switchTab('home')" class="w-full py-3 bg-gray-100 text-gray-500 rounded-xl font-bold text-xs hidden">
+            🏠 홈 화면으로 이동하기
+        </button>
+    </section>
+
+</main>
+
+<nav class="fixed bottom-0 left-0 right-0 bg-white shadow-2xl z-40 bottom-nav">
+    <div class="max-w-xl mx-auto flex justify-around text-center pt-2">
+        <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center gap-1 text-theme-orange font-bold flex-1 py-1">
+            <i class="fa-solid fa-house text-lg"></i><span class="text-[10px]">홈</span>
+        </button>
+        <button onclick="switchTab('category')" id="nav-category" class="flex flex-col items-center gap-1 text-gray-400 font-medium flex-1 py-1">
+            <i class="fa-solid fa-bars text-lg"></i><span class="text-[10px]">카테고리</span>
+        </button>
+        <button onclick="switchTab('search')" id="nav-search" class="flex flex-col items-center gap-1 text-gray-400 font-medium flex-1 py-1">
+            <i class="fa-solid fa-magnifying-glass text-lg"></i><span class="text-[10px]">검색/목록</span>
+        </button>
+        <button onclick="switchTab('mymystable')" id="nav-mymystable" class="flex flex-col items-center gap-1 text-gray-400 font-medium flex-1 py-1">
+            <i class="fa-solid fa-user text-lg"></i><span class="text-[10px]">my미스테이블</span>
+        </button>
+    </div>
+</nav>
+
+<div id="global-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white w-full max-w-sm p-5 rounded-2xl shadow-2xl">
+        <h3 id="global-modal-title" class="text-base font-black border-b pb-2 mb-3 text-gray-900">입력 양식</h3>
+        <div id="global-modal-content" class="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1"></div>
+        <div class="flex gap-2 mt-5">
+            <button onclick="closeGlobalModal()" class="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-200">취소</button>
+            <button id="global-modal-confirm-btn" class="flex-1 py-2.5 theme-orange text-white rounded-xl font-bold text-xs shadow-md">확인</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 🗂️ 초기화 카테고리 데이터 트리 모델 (상위 - 하위 맵핑)
+    const initialCategories = [
+        { id: 1, name: "한식", sub: ["구이/요리", "백반/한정식", "찜/탕/찌개"] },
+        { id: 2, name: "일식", sub: ["오마카세", "스시/사시미", "돈카츠/라멘"] },
+        { id: 3, name: "중식", sub: ["다이닝레스토랑", "일반중화요리", "마라탕/양꼬치"] },
+        { id: 4, name: "양식", sub: ["파인다이닝", "이탈리안", "스테이크/바"] },
+        { id: 5, name: "아시안푸드", sub: ["태국요리", "베트남쌀국수", "인도/중동식"] }
+    ];
+
+    // 🥩 초기 모의 데이터 베이스 (음식점 가맹점 소스 모델)
+    const initialRestaurants = [
+        {
+            id: 101, name: "미식정 한우마을", topCategory: "한식", subCategory: "구이/요리",
+            image: "", isFavorite: true, isRecommended: true, intro: "1++ 최고급 숙성 한우 명가입니다.",
+            menus: [
+                { name: "명품 한우 숙성 등심 (150g)", price: 48000, img: "" },
+                { name: "한우 육회 비빔밥", price: 15000, img: "" }
+            ]
+        },
+        {
+            id: 102, name: "스시 타카시", topCategory: "일식", subCategory: "오마카세",
+            image: "", isFavorite: false, isRecommended: true, intro: "동해안 당일 자연산 활어만을 취급하는 하이엔드 오마카세.",
+            menus: [
+                { name: "런치 스시 코스", price: 60000, img: "" },
+                { name: "디너 오마카세 명품", price: 120000, img: "" }
+            ]
+        },
+        {
+            id: 103, name: "피렌체 테이블", topCategory: "양식", subCategory: "이탈리안",
+            image: "", isFavorite: true, isRecommended: false, intro: "정통 이탈리아 생면 파스타와 화덕 피자 전문점.",
+            menus: [
+                { name: "트러플 크림 생면 파스타", price: 24000, img: "" },
+                { name: "마르게리따 피자", price: 19000, img: "" }
+            ]
+        }
+    ];
+
+    // 로컬 데이터 스토리지 통합 동기화 변수 선언
+    let currentTabId = "home";
+    let activeRestaurantId = null;
+    let db = JSON.parse(localStorage.getItem('mystable_db_v1')) || { 
+        categories: initialCategories, 
+        restaurants: initialRestaurants,
+        reservations: []
+    };
+
+    // 애플리케이션 기동 진입점 함수
+    function initApp() {
+        // 날짜 선택 폼 기본값 세팅 (오늘 날짜)
+        const dateInput = document.getElementById('reserve-date');
+        if (dateInput) {
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+            dateInput.min = today;
+        }
+        saveAndRefresh();
+    }
+
+    // 데이터 영구 저장 및 리렌더링 허브 함수
+    function saveAndRefresh() {
+        localStorage.setItem('mystable_db_v1', JSON.stringify(db));
+        renderHomeDashboards();
+        renderCategoryTree();
+        renderRestaurantListMaster();
+        renderMyReservations();
+    }
+
+    // 탭 전환 제어 및 글로벌 뷰 관리자
+    function switchTab(tabId) {
+        currentTabId = tabId;
+        // 독립 상세 뷰 히든처리
+        document.getElementById('restaurant-detail-view').classList.add('hidden');
+        document.getElementById('reservation-status-view').classList.add('hidden');
+        
+        // 탭 섹션 일괄 토글
+        const tabs = ['home', 'category', 'search', 'mymystable'];
+        tabs.forEach(t => {
+            const element = document.getElementById(`tab-${t}`);
+            const navBtn = document.getElementById(`nav-${t}`);
+            if(t === tabId) {
+                element.classList.remove('hidden');
+                navBtn.className = "flex flex-col items-center gap-1 text-theme-orange font-bold flex-1 py-1";
+            } else {
+                element.classList.add('hidden');
+                navBtn.className = "flex flex-col items-center gap-1 text-gray-400 font-medium flex-1 py-1";
+            }
+        });
+        window.scrollTo(0, 0);
+    }
+
+    // 🏠 홈 화면 대시보드 렌더러 (추천 맛집 / 관심 맛집)
+    function renderHomeDashboards() {
+        const recommendBox = document.getElementById('recommended-restaurants');
+        const favoriteBox = document.getElementById('favorite-restaurants');
+        recommendBox.innerHTML = "";
+        favoriteBox.innerHTML = "";
+
+        const recList = db.restaurants.filter(r => r.isRecommended);
+        const favList = db.restaurants.filter(r => r.isFavorite);
+
+        // 추천 맛집 바인딩 (그리드 카드 스타일)
+        if(recList.length === 0) {
+            recommendBox.innerHTML = `<div class="col-span-2 text-center py-6 text-xs text-gray-400 bg-white rounded-xl border border-dashed">추천으로 등록된 맛집이 없습니다.</div>`;
+        } else {
+            recList.forEach(res => {
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform flex flex-col";
+                card.onclick = () => routeToDetail(res.id);
+                card.innerHTML = `
+                    <div class="h-24 bg-gray-200 relative flex items-center justify-center text-gray-400 text-2xl">
+                        ${res.image ? `<img src="${res.image}" class="w-full h-full object-cover">` : '<i class="fa-solid fa-store"></i>'}
+                        <span class="absolute top-2 left-2 bg-red-500 text-white font-black text-[9px] px-1.5 py-0.5 rounded">HOT</span>
+                    </div>
+                    <div class="p-3 flex-1 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-gray-800 text-xs truncate">${res.name}</h4>
+                            <p class="text-[10px] text-gray-400 mt-0.5">${res.topCategory} • ${res.subCategory}</p>
+                        </div>
+                        <span class="text-[10px] text-theme-orange font-bold mt-2 inline-block">바로 예약 ⚡</span>
+                    </div>
+                `;
+                recommendBox.appendChild(card);
+            });
+        }
+
+        // 관심 맛집 바인딩 (리스트 가로 와이드 카드 스타일)
+        if(favList.length === 0) {
+            favoriteBox.innerHTML = `<div class="text-center py-8 text-xs text-gray-400 bg-white rounded-xl border border-dashed">하트(♥) 찜 표시를 한 관심 맛집이 없습니다.</div>`;
+        } else {
+            favList.forEach(res => {
+                const row = document.createElement('div');
+                row.className = "bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex gap-3 items-center cursor-pointer hover:bg-gray-50/50";
+                row.onclick = () => routeToDetail(res.id);
+                row.innerHTML = `
+                    <div class="w-12 h-12 rounded-lg bg-orange-50 flex-shrink-0 flex items-center justify-center text-theme-orange text-lg">
+                        ${res.image ? `<img src="${res.image}" class="w-full h-full object-cover rounded-lg">` : '<i class="fa-solid fa-heart-circle-check"></i>'}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-gray-800 text-xs truncate">${res.name}</h4>
+                            <span class="text-[10px] text-gray-400 font-normal">${res.subCategory}</span>
+                        </div>
+                        <p class="text-[11px] text-gray-400 truncate mt-0.5">${res.intro || '매장 한줄 소개가 등록되지 않았습니다.'}</p>
+                    </div>
+                `;
+                favoriteBox.appendChild(row);
+            });
+        }
+    }
+
+    // 🗂️ 카테고리 대분류/소분류 계층 구조 트리형 렌더러
+    function renderCategoryTree() {
+        const container = document.getElementById('category-tree-container');
+        container.innerHTML = "";
+
+        db.categories.forEach((cat, mainIdx) => {
+            const box = document.createElement('div');
+            box.className = "bg-white p-4 rounded-xl shadow-sm border border-gray-100";
+            
+            // 상위 카테고리 헤더바 라벨링 및 단독 삭제 버튼 배치
+            let headHtml = `
+                <div class="flex justify-between items-center border-b pb-2 mb-2 flex-wrap gap-1">
+                    <span class="font-black text-sm text-gray-800 flex items-center gap-1.5">
+                        <i class="fa-regular fa-folder-open text-orange-400"></i> ${cat.name} 
+                        <span class="text-[10px] text-gray-400 font-normal">(${cat.sub.length}개 서브분류)</span>
+                    </span>
+                    <div class="flex gap-1">
+                        <button onclick="addSubCategoryDirect(${mainIdx})" class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded border border-blue-200 font-bold hover:bg-blue-100">+ 하위분류 추가</button>
+                        <button onclick="deleteTopCategoryDirect(${mainIdx})" class="text-[10px] text-red-500 hover:bg-red-50 px-1 py-0.5 rounded">대분류 삭제</button>
+                    </div>
+                </div>
+            `;
+            
+            // 하위 카테고리 배치 뱃지 모음단 구성
+            let badgesHtml = `<div class="flex flex-wrap gap-1.5 pt-1">`;
+            if(cat.sub.length === 0) {
+                badgesHtml += `<span class="text-[11px] text-gray-400 font-medium italic">하위 세부 분류 카테고리가 비어있습니다.</span>`;
+            } else {
+                cat.sub.forEach((subName, subIdx) => {
+                    badgesHtml += `
+                        <span class="inline-flex items-center gap-1 bg-gray-50 text-gray-700 text-xs font-bold px-2.5 py-1 rounded-full border border-gray-200/80 cursor-pointer hover:border-orange-400 transition-colors" onclick="filterBySubCategory('${cat.name}', '${subName}')">
+                            📁 ${subName}
+                            <i class="fa-solid fa-xmark text-[9px] text-gray-400 hover:text-red-500 pl-1" onclick="event.stopPropagation(); deleteSubCategoryDirect(${mainIdx}, ${subIdx})"></i>
+                        </span>
+                    `;
+                });
+            }
+            badgesHtml += `</div>`;
+
+            box.innerHTML = headHtml + badgesHtml;
+            container.appendChild(box);
+        });
+    }
+
+    // ➕ 상위 대분류 신규 직통 등록 스크립트 모달창 작동
+    function showCategoryManageModal() {
+        openGlobalModal("대분류 카테고리 신규 추가", `
+            <label class="text-xs font-bold text-gray-500 block mb-1">새로운 대분류 요리 코드명</label>
+            <input id="modal-input-topcat" type="text" placeholder="예: 세계요리, 베이커리, 주점" class="w-full border p-2 rounded-xl text-sm">
+        `, () => {
+            const inputVal = document.getElementById('modal-input-topcat').value.trim();
+            if(!inputVal) return alert("카테고리명은 필수 기입 사항입니다.");
+            
+            if(db.categories.some(c => c.name === inputVal)) return alert("이미 등록 처리되어 있는 이름의 대분류 카테고리입니다.");
+
+            db.categories.push({ id: Date.now(), name: inputVal, sub: [] });
+            saveAndRefresh();
+            closeGlobalModal();
+        });
+    }
+
+    // ➕ 특정 대분류 소속 하위 카테고리 직통 주입
+    function addSubCategoryDirect(mainIdx) {
+        const subName = prompt(`[${db.categories[mainIdx].name}] 아래에 추가할 하위 세부 카테고리명을 기입하세요:`);
+        if(subName && subName.trim() !== "") {
+            const trimmed = subName.trim();
+            if(db.categories[mainIdx].sub.includes(trimmed)) return alert("해당 대분류 밑에 동일 이름의 서브 분류가 존재합니다.");
+            db.categories[mainIdx].sub.push(trimmed);
+            saveAndRefresh();
+        }
+    }
+
+    // ❌ 대분류 삭제
+    function deleteTopCategoryDirect(mainIdx) {
+        const target = db.categories[mainIdx];
+        if(confirm(`[${target.name}] 대분류를 영구삭제하시겠습니까?\n하위 소속 세부 카테고리들도 일제히 영구 정리됩니다.`)) {
+            db.categories.splice(mainIdx, 1);
+            saveAndRefresh();
+        }
+    }
+
+    // ❌ 소분류 삭제
+    function deleteSubCategoryDirect(mainIdx, subIdx) {
+        const cat = db.categories[mainIdx];
+        if(confirm(`[${cat.sub[subIdx]}] 하위 소분류 분할 요소를 삭제하시겠습니까?`)) {
+            cat.sub.splice(subIdx, 1);
+            saveAndRefresh();
+        }
+    }
+
+    // 📁 카테고리 링크 클릭 시 검색 탭으로 연결 타겟팅 연동 라우터
+    function filterBySubCategory(topCat, subCat) {
+        switchTab('search');
+        document.getElementById('search-title-text').innerText = `🔍 분류: ${topCat} > ${subCat}`;
+        renderFilteredRestaurants(r => r.topCategory === topCat && r.subCategory === subCat);
+    }
+
+    // 🔍 글로벌 통합 검색바 작동기 핸들러
+    function handleGlobalSearch() {
+        const query = document.getElementById('global-search-input').value.trim();
+        if(!query) {
+            switchTab('search');
+            document.getElementById('search-title-text').innerText = "전체 가맹 맛집 리스트";
+            renderRestaurantListMaster();
+            return;
+        }
+
+        switchTab('search');
+        document.getElementById('search-title-text').innerText = `🔍 검색 결과: "${query}"`;
+        renderFilteredRestaurants(r => 
+            r.name.includes(query) || 
+            r.topCategory.includes(query) || 
+            r.subCategory.includes(query) ||
+            (r.intro && r.intro.includes(query))
+        );
+    }
+
+    // 📋 마스터 테이블 맛집 목록 출력 렌더러 (조건부 필터링 연계 추상화 내장)
+    function renderRestaurantListMaster() {
+        renderFilteredRestaurants(() => true);
+    }
+
+    function renderFilteredRestaurants(filterPredicate) {
+        const container = document.getElementById('search-results-list');
+        container.innerHTML = "";
+
+        const list = db.restaurants.filter(filterPredicate);
+
+        if(list.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-12 bg-white rounded-2xl border border-dashed p-6 text-gray-400 text-xs">
+                    <i class="fa-solid fa-building-circle-exclamation text-3xl mb-2 text-gray-300"></i><br>
+                    조건에 부합하는 맛집 정보가 존재하지 않습니다.<br>직접 새로운 맛집 가맹점을 신규 등록해보세요!
+                </div>`;
+            return;
+        }
+
+        list.forEach(res => {
+            const box = document.createElement('div');
+            box.className = "bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3 relative";
+            
+            // 하트 및 추천 태그 가시성 빌더
+            const favIconClass = res.isFavorite ? "fa-solid fa-heart text-red-500" : "fa-regular fa-heart text-gray-300";
+            const recommendBadge = res.isRecommended ? `<span class="bg-amber-100 text-amber-700 font-bold text-[9px] px-1.5 py-0.5 rounded">MD추천</span>` : '';
+
+            box.innerHTML = `
+                <div class="flex gap-3 cursor-pointer" onclick="routeToDetail(${res.id})">
+                    <div class="w-16 h-16 bg-gray-100 text-gray-400 rounded-xl flex-shrink-0 flex items-center justify-center text-2xl relative">
+                        ${res.image ? `<img src="${res.image}" class="w-full h-full object-cover rounded-xl">` : '<i class="fa-solid fa-store"></i>'}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <h4 class="font-black text-gray-900 text-sm truncate">${res.name}</h4>
+                            ${recommendBadge}
+                        </div>
+                        <p class="text-[11px] text-gray-400 font-medium mt-0.5">${res.topCategory} > ${res.subCategory}</p>
+                        <p class="text-xs text-gray-500 truncate mt-1.5">${res.intro || '매장 한줄 슬로건이 비어있습니다.'}</p>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center border-t pt-2.5 mt-1">
+                    <button onclick="toggleFavoriteState(${res.id})" class="text-xs font-bold text-gray-500 flex items-center gap-1 px-2 py-1 rounded bg-gray-50">
+                        <i class="${favIconClass}"></i> 찜하기
+                    </button>
+                    <div class="flex gap-1.5">
+                        <button onclick="showEditRestaurantModal(${res.id})" class="text-[11px] font-bold border border-blue-200 bg-blue-50/50 text-blue-600 px-2 py-1 rounded-md hover:bg-blue-50">수정</button>
+                        <button onclick="deleteRestaurantMaster(${res.id})" class="text-[11px] font-bold border border-red-200 bg-red-50/50 text-red-500 px-2 py-1 rounded-md hover:bg-red-50">삭제</button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(box);
+        });
+    }
+
+    // ❤️ 맛집 찜하기 토글러 스위치
+    function toggleFavoriteState(id) {
+        const res = db.restaurants.find(r => r.id === id);
+        if(res) {
+            res.isFavorite = !res.isFavorite;
+            saveAndRefresh();
+        }
+    }
+
+    // ➕ 맛집 신규 등록 서브시스템
+    function showAddRestaurantModal() {
+        // 동적 셀렉박스 구성용 대분류 연계 배열 가공
+        let categorySelectOptions = db.categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+
+        openGlobalModal("가짜 맛집 신규 제휴 등록", `
+            <input id="add-res-name" type="text" placeholder="식당명/가맹점명 명명" class="w-full border p-2.5 rounded-xl text-xs mb-2">
+            <div class="grid grid-cols-2 gap-2 mb-2">
+                <div>
+                    <label class="text-[10px] text-gray-400 font-bold block mb-0.5">상위 대분류</label>
+                    <select id="add-res-topcat" onchange="syncModalSubCategorySelect('add-res-topcat', 'add-res-subcat')" class="w-full border p-2 bg-white text-xs rounded-xl">${categorySelectOptions}</select>
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 font-bold block mb-0.5">하위 소분류</label>
+                    <select id="add-res-subcat" class="w-full border p-2 bg-white text-xs rounded-xl"></select>
+                </div>
+            </div>
+            <input id="add-res-intro" type="text" placeholder="매장 요약 한 줄 소개 메시지" class="w-full border p-2.5 rounded-xl text-xs mb-2">
+            <div class="flex gap-4 p-2 border rounded-xl bg-gray-50 items-center justify-between">
+                <label class="text-xs font-bold text-gray-600">MD 추천 맛집 지정</label>
+                <input type="checkbox" id="add-res-recommend" class="w-4 h-4 accent-orange-500">
+            </div>
+            <label class="text-[10px] text-blue-500 font-bold block mt-2">* 맛집 썸네일 이미지 드래그 앤 드롭 호환</label>
+            <input id="add-res-img" type="text" placeholder="이미지 주소 URL 주소 입력 또는 파일 드래그" class="w-full border p-2.5 rounded-xl text-xs bg-gray-50"
+                ondrop="handleDataUrlDrop(event, 'add-res-img')" ondragover="event.preventDefault()" ondragenter="event.currentTarget.classList.add('drag-over')" ondragleave="event.currentTarget.classList.remove('drag-over')">
+        `, () => {
+            const name = document.getElementById('add-res-name').value.trim();
+            const topCategory = document.getElementById('add-res-topcat').value;
+            const subCategory = document.getElementById('add-res-subcat').value;
+            const intro = document.getElementById('add-res-intro').value.trim();
+            const isRecommended = document.getElementById('add-res-recommend').checked;
+            const image = document.getElementById('add-res-img').value;
+
+            if(!name) return alert("식당 이름은 필수입니다.");
+
+            db.restaurants.push({
+                id: Date.now(), name, topCategory, subCategory, intro, isRecommended, isFavorite: false, image, menus: []
+            });
+            saveAndRefresh();
+            closeGlobalModal();
+        });
+
+        // 서브 셀렉트박스 강제 1차 동기화 구동
+        syncModalSubCategorySelect('add-res-topcat', 'add-res-subcat');
+    }
+
+    // ✏️ 맛집 정보 수정 모달 빌더
+    function showEditRestaurantModal(id) {
+        const res = db.restaurants.find(r => r.id === id);
+        if(!res) return;
+
+        let categorySelectOptions = db.categories.map(c => `<option value="${c.name}" ${res.topCategory === c.name ? 'selected' : ''}>${c.name}</option>`).join('');
+
+        openGlobalModal("매장 정보 수정 편집", `
+            <input id="edit-res-name" type="text" value="${res.name}" placeholder="식당명/가맹점명 명명" class="w-full border p-2.5 rounded-xl text-xs mb-2">
+            <div class="grid grid-cols-2 gap-2 mb-2">
+                <div>
+                    <label class="text-[10px] text-gray-400 font-bold block mb-0.5">상위 대분류</label>
+                    <select id="edit-res-topcat" onchange="syncModalSubCategorySelect('edit-res-topcat', 'edit-res-subcat')" class="w-full border p-2 bg-white text-xs rounded-xl">${categorySelectOptions}</select>
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 font-bold block mb-0.5">하위 소분류</label>
+                    <select id="edit-res-subcat" class="w-full border p-2 bg-white text-xs rounded-xl"></select>
+                </div>
+            </div>
+            <input id="edit-res-intro" type="text" value="${res.intro || ''}" placeholder="매장 요약 한 줄 소개 메시지" class="w-full border p-2.5 rounded-xl text-xs mb-2">
+            <div class="flex gap-4 p-2 border rounded-xl bg-gray-50 items-center justify-between">
+                <label class="text-xs font-bold text-gray-600">MD 추천 맛집 지정</label>
+                <input type="checkbox" id="edit-res-recommend" ${res.isRecommended ? 'checked' : ''} class="w-4 h-4 accent-orange-500">
+            </div>
+            <input id="edit-res-img" type="text" value="${res.image || ''}" placeholder="이미지 URL 혹은 파일 드래그앤드롭" class="w-full border p-2.5 rounded-xl text-xs bg-gray-50 mt-2"
+                ondrop="handleDataUrlDrop(event, 'edit-res-img')" ondragover="event.preventDefault()">
+        `, () => {
+            res.name = document.getElementById('edit-res-name').value.trim();
+            res.topCategory = document.getElementById('edit-res-topcat').value;
+            res.subCategory = document.getElementById('edit-res-subcat').value;
+            res.intro = document.getElementById('edit-res-intro').value.trim();
+            res.isRecommended = document.getElementById('edit-res-recommend').checked;
+            res.image = document.getElementById('edit-res-img').value;
+
+            if(!res.name) return alert("식당 이름 명칭 누락 불가");
+            saveAndRefresh();
+            closeGlobalModal();
+        });
+
+        // 편집 대상 소분류 동기화 매칭 구동 후 값 바인딩 보정
+        syncModalSubCategorySelect('edit-res-topcat', 'edit-res-subcat', res.subCategory);
+    }
+
+    // 모달 팝업 내부 대분류-소분류 동적 셀렉박스 종속 제어 로직
+    function syncModalSubCategorySelect(topSelectId, subSelectId, preSelectedValue = "") {
+        const topVal = document.getElementById(topSelectId).value;
+        const subSelect = document.getElementById(subSelectId);
+        subSelect.innerHTML = "";
+
+        const matchCat = db.categories.find(c => c.name === topVal);
+        if(matchCat && matchCat.sub.length > 0) {
+            matchCat.sub.forEach(sName => {
+                const opt = document.createElement('option');
+                opt.value = sName;
+                opt.innerText = sName;
+                if(sName === preSelectedValue) opt.selected = true;
+                subSelect.appendChild(opt);
+            });
+        } else {
+            subSelect.innerHTML = `<option value="일반">-- 일반 서브 카테고리 --</option>`;
+        }
+    }
+
+    // ❌ 매장 영구 제휴 해지 삭제 단축 핸들러
+    function deleteRestaurantMaster(id) {
+        if(confirm("해당 식당 원천 가맹데이터 정보를 영구 파기하시겠습니까?\n등록된 메뉴 판촉 정보들도 자동 증발 처리됩니다.")) {
+            db.restaurants = db.restaurants.filter(r => r.id !== id);
+            saveAndRefresh();
+        }
+    }
+
+    // ==========================================
+    // 🍔 맛집 내부 진입 및 상세 메뉴 CRUD 제어부
+    // ==========================================
+    
+    function routeToDetail(id) {
+        activeRestaurantId = id;
+        const res = db.restaurants.find(r => r.id === id);
+        if(!res) return;
+
+        // 상단 네비게이션 비활성화 무드 전환 및 타겟팅 스위칭
+        document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+        document.getElementById('restaurant-detail-view').classList.remove('hidden');
+        window.scrollTo(0,0);
+
+        // 헤더 프로필 렌더링
+        const headerCard = document.getElementById('restaurant-detail-header-card');
+        headerCard.innerHTML = `
+            <div class="h-44 bg-gray-100 flex items-center justify-center text-gray-300 text-4xl relative">
+                ${res.image ? `<img src="${res.image}" class="w-full h-full object-cover">` : '<i class="fa-solid fa-store text-5xl"></i>'}
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                <div class="absolute bottom-4 left-4 right-4 text-white">
+                    <span class="bg-orange-500 text-[10px] font-black px-2 py-0.5 rounded-md uppercase">${res.subCategory}</span>
+                    <h2 class="text-xl font-black mt-1 drop-shadow-md">${res.name}</h2>
+                </div>
+            </div>
+            <div class="p-4 bg-orange-50/50 border-b">
+                <p class="text-xs text-gray-600 leading-relaxed font-medium"><i class="fa-solid fa-quote-left text-orange-400 text-[10px] mr-1"></i>${res.intro || '매장 상세 요약 공란 상태.'}</p>
+            </div>
+        `;
+
+        renderMenusSubModule(res);
+    }
+
+    // 내부 전용 하위 메뉴 카드 렌더러
+    function renderMenusSubModule(res) {
+        const container = document.getElementById('restaurant-menu-list-container');
+        container.innerHTML = "";
+
+        if(!res.menus || res.menus.length === 0) {
+            container.innerHTML = `<div class="text-center py-8 text-xs text-gray-400 italic">등록 제공되는 시그니처 메뉴가 공란 상태입니다.<br>우측 상단의 버튼을 통해 신규 메뉴를 보충해보세요.</div>`;
+            return;
+        }
+
+        res.menus.forEach((m, idx) => {
+            const row = document.createElement('div');
+            row.className = "p-3 border rounded-xl bg-gray-50/50 flex justify-between items-center gap-3";
+            row.innerHTML = `
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-12 h-12 bg-gray-200 text-gray-400 text-sm flex-shrink-0 rounded-lg flex items-center justify-center">
+                        ${m.img ? `<img src="${m.img}" class="w-full h-full object-cover rounded-lg">` : '<i class="fa-solid fa-bowl-food"></i>'}
+                    </div>
+                    <div class="min-w-0">
+                        <p class="font-bold text-xs text-gray-800 truncate">${m.name}</p>
+                        <p class="text-xs text-theme-orange font-black mt-0.5">${parseInt(m.price).toLocaleString()}원</p>
+                    </div>
+                </div>
+                <div class="flex gap-1 flex-shrink-0">
+                    <button onclick="showEditMenuModal(${idx})" class="text-[10px] font-bold border px-2 py-1 bg-white text-blue-500 rounded-md">수정</button>
+                    <button onclick="deleteMenuDirect(${idx})" class="text-[10px] font-bold border px-2 py-1 bg-white text-red-500 rounded-md">삭제</button>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    // ➕ 특정 매장 메뉴 신규 삽입
+    function showAddMenuModal() {
+        openGlobalModal("식당 대표 메뉴 품목 추가", `
+            <input id="add-menu-name" type="text" placeholder="메뉴 요리명 입력" class="w-full border p-2.5 rounded-xl text-xs mb-2">
+            <input id="add-menu-price" type="number" placeholder="단품 가격 (숫자 입력)" class="w-full border p-2.5 rounded-xl text-xs mb-2">
+            <label class="text-[10px] text-blue-500 font-bold block">* 음식 연출컷 드래그 드롭 가능</label>
+            <input id="add-menu-img" type="text" placeholder="이미지 주소 링크 또는 파일 드래그" class="w-full border p-2.5 rounded-xl text-xs bg-gray-50"
+                ondrop="handleDataUrlDrop(event, 'add-menu-img')" ondragover="event.preventDefault()">
+        `, () => {
+            const name = document.getElementById('add-menu-name').value.trim();
+            const price = parseInt(document.getElementById('add-menu-price').value) || 0;
+            const img = document.getElementById('add-menu-img').value;
+
+            if(!name) return alert("메뉴 품목명 기입 누락");
+
+            const res = db.restaurants.find(r => r.id === activeRestaurantId);
+            if(res) {
+                if(!res.menus) res.menus = [];
+                res.menus.push({ name, price, img });
+                saveAndRefresh();
+                renderMenusSubModule(res);
+                closeGlobalModal();
+            }
+        });
+    }
+
+    // ✏️ 메뉴 개별 편집 수정
+    function showEditMenuModal(idx) {
+        const res = db.restaurants.find(r => r.id === activeRestaurantId);
+        const menu = res.menus[idx];
+
+        openGlobalModal("메뉴 세부 정보 수정 편집", `
+            <input id="edit-menu-name" type="text" value="${menu.name}" placeholder="메뉴 요리명 입력" class="w-full border p-2.5 rounded-xl text-xs mb-2">
+            <input id="edit-menu-price" type="number" value="${menu.price}" placeholder="단품 가격 (숫자 입력)" class="w-full border p-2.5 rounded-xl text-xs mb-2">
+            <input id="edit-menu-img" type="text" value="${menu.img || ''}" placeholder="이미지 주소 링크 또는 파일 드래그" class="w-full border p-2.5 rounded-xl text-xs bg-gray-50"
+                ondrop="handleDataUrlDrop(event, 'edit-menu-img')" ondragover="event.preventDefault()">
+        `, () => {
+            menu.name = document.getElementById('edit-menu-name').value.trim();
+            menu.price = parseInt(document.getElementById('edit-menu-price').value) || 0;
+            menu.img = document.getElementById('edit-menu-img').value;
+
+            if(!menu.name) return alert("명칭 공란 불가");
+
+            saveAndRefresh();
+            renderMenusSubModule(res);
+            closeGlobalModal();
+        });
+    }
+
+    // ❌ 메뉴 단일 삭제
+    function deleteMenuDirect(idx) {
+        if(confirm("해당 판매 품목 메뉴를 리스트에서 제외 파기합니까?")) {
+            const res = db.restaurants.find(r => r.id === activeRestaurantId);
+            res.menus.splice(idx, 1);
+            saveAndRefresh();
+            renderMenusSubModule(res);
+        }
+    }
+
+    // ==========================================
+    // 🛵 실시간 가짜 예약 제어 프로세스 모듈
+    // ==========================================
+    let localPeopleCount = 2;
+    function updatePeopleCount(change) {
+        localPeopleCount = Math.max(1, localPeopleCount + change);
+        document.getElementById('reserve-people-counter').innerText = localPeopleCount;
+    }
+
+    // 가짜 예약 실시간 상태 시뮬레이션 머신 엔진
+    function triggerReservationSimulation() {
+        const res = db.restaurants.find(r => r.id === activeRestaurantId);
+        const rDate = document.getElementById('reserve-date').value;
+        const rTime = document.getElementById('reserve-time').value;
+
+        if(!rDate) return alert("방문 예정 예약일을 지정하세요.");
+
+        // 스위칭 전용 가상 시뮬레이션 라우팅
+        document.getElementById('restaurant-detail-view').classList.add('hidden');
+        const view = document.getElementById('reservation-status-view');
+        view.classList.remove('hidden');
+        
+        const progressBar = document.getElementById('simulation-progress-bar');
+        const mainText = document.getElementById('status-main-text');
+        const subText = document.getElementById('status-sub-text');
+        const stepInd = document.getElementById('simulation-step-indicator');
+        const homeBtn = document.getElementById('status-home-btn');
+
+        // 상태값 초기화 복원 리셋
+        progressBar.style.width = "0%";
+        mainText.innerText = "예약 대기 신청서 서버 송신 중...";
+        subText.innerText = `[${res.name}] 가맹점 포스 장치와 안전망 동기화 암호 스캔을 개시합니다.`;
+        stepInd.innerText = "🔑 도메인 HTTPS 보안 연결 및 데이터 연동 확인 중...";
+        homeBtn.classList.add('hidden');
+
+        // 타이밍 스케줄러를 이용한 타임라인 연계 연출 (100% 가짜 모의 시뮬레이션)
+        setTimeout(() => {
+            progressBar.style.width = "35%";
+            stepInd.innerText = "🔍 매장 실시간 잔여 테이블 좌석 배치 분석 및 확인 중...";
+        }, 1200);
+
+        setTimeout(() => {
+            progressBar.style.width = "70%";
+            stepInd.innerText = "🤖 예약 자동 매칭 알고리즘 최종 승인 대기 단계...";
+        }, 2500);
+
+        setTimeout(() => {
+            progressBar.style.width = "100%";
+            mainText.innerHTML = `🎉 가짜 예약 최종 확정 완료!`;
+            subText.innerHTML = `<span class='text-theme-orange font-bold'>실제 예약은 반영되지 않았습니다 (가상 테스트).</span><br>
+            일시: ${rDate} (${rTime}) / 인원: ${localPeopleCount}명`;
+            stepInd.innerText = "✅ 시뮬레이션 매칭 성공 (My미스테이블 이력 자동 적재)";
+            homeBtn.classList.remove('hidden');
+
+            // 마이페이지 탭 데이터용 아카이빙 영구 적재
+            db.reservations.unshift({
+                id: Date.now(),
+                resName: res.name,
+                date: rDate,
+                time: rTime,
+                people: localPeopleCount,
+                timeStampStr: new Date().toLocaleString()
+            });
+            saveAndRefresh();
+        }, 4000);
+    }
+
+    // 마이페이지 내역 출력 빌더
+    function renderMyReservations() {
+        const container = document.getElementById('my-reservation-history');
+        container.innerHTML = "";
+
+        if(db.reservations.length === 0) {
+            container.innerHTML = `<div class="text-center py-10 bg-white border rounded-xl text-xs text-gray-400">최근 예약 확정 진행 시뮬레이션 이력이 비어있습니다.</div>`;
+            return;
+        }
+
+        db.reservations.forEach(r => {
+            const row = document.createElement('div');
+            row.className = "bg-white p-4 rounded-xl shadow-sm border border-orange-100 flex flex-col gap-1.5 relative";
+            row.innerHTML = `
+                <div class="flex justify-between items-center border-b pb-1.5">
+                    <span class="text-xs font-black text-gray-800">${r.resName}</span>
+                    <span class="text-[10px] bg-green-500 text-white font-bold px-1.5 py-0.5 rounded">방문확정(가짜)</span>
+                </div>
+                <p class="text-xs text-gray-600 font-medium pt-1">📆 일정: <span class="text-gray-900 font-bold">${r.date} (${r.time})</span></p>
+                <p class="text-xs text-gray-600 font-medium">👥 인원: <span class="text-gray-900 font-bold">${r.people}명</span></p>
+                <p class="text-[9px] text-gray-300 text-right mt-1">신청시각: ${r.timeStampStr}</p>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    // ==========================================
+    // 📂 파일 드래그앤드롭 로컬 DataURL 변환 모듈
+    // ==========================================
+    function handleDataUrlDrop(e, targetInputId) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                document.getElementById(targetInputId).value = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            alert("이미지 파일 형식만 드롭 업로드가 허용됩니다.");
+        }
+    }
+
+    // ==========================================
+    // ⚙️ 모달 시스템 기본 작동 라이브러리
+    // ==========================================
+    function openGlobalModal(title, innerContentHtml, confirmCallback) {
+        document.getElementById('global-modal-title').innerText = title;
+        document.getElementById('global-modal-content').innerHTML = innerContentHtml;
+        document.getElementById('global-modal-confirm-btn').onclick = confirmCallback;
+        document.getElementById('global-modal').classList.remove('hidden');
+    }
+    function closeModalGlobal() { document.getElementById('global-modal').classList.add('hidden'); }
+    function closeGlobalModal() { closeModalGlobal(); }
+
+    // 기동 엔진 부트스트랩 트리거
+    initApp();
+</script>
+
+</body>
+</html>
