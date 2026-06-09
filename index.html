@@ -16,6 +16,10 @@
         .drag-over { background-color: #fff3cd !important; border: 2px dashed #ff6b35 !important; }
         /* 하단 탭바 고정 스타일 */
         .bottom-nav { border-top: 1px solid #e5e7eb; padding-bottom: calc(env(safe-area-inset-bottom) + 8px); }
+        
+        /* 카테고리 드래그앤드롭 시각 효과 */
+        .category-draggable { transition: transform 0.2s, box-shadow 0.2s; }
+        .category-draggable.dragging { opacity: 0.5; border: 2px dashed #ff6b35; background-color: #fff7ed; }
     </style>
 </head>
 <body class="text-gray-800 antialiased">
@@ -71,12 +75,13 @@
     </section>
 
     <section id="tab-category" class="hidden">
-        <div class="flex justify-between items-center mb-4 border-b pb-2">
+        <div class="flex justify-between items-center mb-2 border-b pb-2">
             <h2 class="text-xl font-black text-gray-900">음식 종류 / 카테고리</h2>
             <button onclick="showCategoryManageModal()" class="text-xs font-bold bg-gray-100 text-gray-600 px-2.5 py-1.5 rounded-lg border hover:bg-gray-200">
-                <i class="fa-solid fa-gear"></i> 분류 추가/편집
+                <i class="fa-solid fa-plus"></i> 대분류 추가
             </button>
         </div>
+        <p class="text-[11px] text-gray-400 mb-4 font-medium"><i class="fa-solid fa-circle-info text-orange-400"></i> 좌측 <i class="fa-solid fa-grip-lines"></i> 아이콘을 드래그하여 순서를 바꿀 수 있습니다.</p>
         <div id="category-tree-container" class="flex flex-col gap-4"></div>
     </section>
 
@@ -103,7 +108,6 @@
         <div id="my-reservation-history" class="flex flex-col gap-3"></div>
     </section>
 
-    <!-- 🍔 맛집 상세 정보 및 메뉴 카테고리 관리 영역 -->
     <section id="restaurant-detail-view" class="hidden">
         <div id="restaurant-detail-header-card" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-4"></div>
 
@@ -217,7 +221,6 @@
         { id: 5, name: "아시안푸드", sub: ["태국요리", "베트남쌀국수", "인도/중동식"] }
     ];
 
-    // 🥩 초기 모의 데이터 베이스 (메뉴별 설명란 'desc' 항목 기본 주입)
     const initialRestaurants = [
         {
             id: 101, name: "미식정 한우마을", topCategory: "한식", subCategory: "구이/요리",
@@ -232,7 +235,7 @@
                 {
                     name: "식사류",
                     items: [
-                        { name: "한우 육회 비빔밥", price: 15000, desc: "당일 도축한 설깃살과 신선한 7가지 고명을 올린 비빔밥", img: "" }
+                        { name: "한우 육회 비빔밥", price: 15000, desc: "당일 도축한 설깃살 and 신선한 7가지 고명을 올린 비빔밥", img: "" }
                     ]
                 }
             ]
@@ -286,7 +289,6 @@
             }
             if (!res.menuCategories) res.menuCategories = [];
             
-            // 데이터 안전 마이그레이션 (desc 필드가 없는 기존 데이터용 보정)
             res.menuCategories.forEach(cat => {
                 if(cat.items) {
                     cat.items.forEach(item => {
@@ -395,23 +397,34 @@
         }
     }
 
+    // 📁 [수정 & 기능 추가] 대분류 카테고리 트리 렌더러 (수정 및 드래그앤드롭 연동)
     function renderCategoryTree() {
         const container = document.getElementById('category-tree-container');
         container.innerHTML = "";
 
         db.categories.forEach((cat, mainIdx) => {
             const box = document.createElement('div');
-            box.className = "bg-white p-4 rounded-xl shadow-sm border border-gray-100";
+            box.className = "bg-white p-4 rounded-xl shadow-sm border border-gray-100 category-draggable flex flex-col gap-2";
+            box.setAttribute('draggable', 'true');
+            box.setAttribute('data-index', mainIdx);
+            
+            // 드래그 앤 드롭 이벤트 핸들러 바인딩
+            box.addEventListener('dragstart', handleCategoryDragStart);
+            box.addEventListener('dragover', handleCategoryDragOver);
+            box.addEventListener('dragend', handleCategoryDragEnd);
+            box.addEventListener('drop', handleCategoryDrop);
             
             let headHtml = `
-                <div class="flex justify-between items-center border-b pb-2 mb-2 flex-wrap gap-1">
+                <div class="flex justify-between items-center border-b pb-2 mb-1 flex-wrap gap-1">
                     <span class="font-black text-sm text-gray-800 flex items-center gap-1.5">
+                        <i class="fa-solid fa-grip-lines text-gray-300 cursor-grab active:cursor-grabbing mr-1 hover:text-gray-500"></i>
                         <i class="fa-regular fa-folder-open text-orange-400"></i> ${cat.name} 
                         <span class="text-[10px] text-gray-400 font-normal">(${cat.sub.length}개 서브분류)</span>
                     </span>
                     <div class="flex gap-1">
-                        <button onclick="addSubCategoryDirect(${mainIdx})" class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded border border-blue-200 font-bold hover:bg-blue-100">+ 하위분류 추가</button>
-                        <button onclick="deleteTopCategoryDirect(${mainIdx})" class="text-[10px] text-red-500 hover:bg-red-50 px-1 py-0.5 rounded">대분류 삭제</button>
+                        <button onclick="showEditTopCategoryModal(${mainIdx})" class="text-[10px] bg-gray-50 text-gray-600 px-2 py-0.5 rounded border font-bold hover:bg-gray-100">이름 변경</button>
+                        <button onclick="addSubCategoryDirect(${mainIdx})" class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded border border-blue-200 font-bold hover:bg-blue-100">+ 소분류 추가</button>
+                        <button onclick="deleteTopCategoryDirect(${mainIdx})" class="text-[10px] text-red-500 hover:bg-red-50 px-1 py-0.5 rounded">삭제</button>
                     </div>
                 </div>
             `;
@@ -434,6 +447,76 @@
             box.innerHTML = headHtml + badgesHtml;
             container.appendChild(box);
         });
+    }
+
+    // ✏️ [신규] 대분류 카테고리 명칭 수정 모달 기능 및 가맹점 연동 데이터 동기화
+    function showEditTopCategoryModal(mainIdx) {
+        const target = db.categories[mainIdx];
+        const oldName = target.name;
+
+        openGlobalModal("대분류 카테고리 이름 수정", `
+            <label class="text-xs font-bold text-gray-500 block mb-1">변경할 대분류 요리 코드명</label>
+            <input id="modal-input-edit-topcat" type="text" value="${oldName}" class="w-full border p-2 rounded-xl text-sm">
+            <p class="text-[10px] text-red-400 mt-1">* 해당 대분류 소속 맛집들의 상위 카테고리 정보도 함께 자동 업데이트됩니다.</p>
+        `, () => {
+            const newName = document.getElementById('modal-input-edit-topcat').value.trim();
+            if(!newName) return alert("카테고리명은 필수 기입 사항입니다.");
+            if(oldName !== newName && db.categories.some(c => c.name === newName)) {
+                return alert("이미 동일한 이름의 대분류 카테고리가 존재합니다.");
+            }
+
+            // 1. 카테고리 마스터 테이블 이름 변경
+            target.name = newName;
+
+            // 2. 가맹 맛집 데이터베이스 소속 상위 카테고리명 일괄 동기화 보정
+            db.restaurants.forEach(res => {
+                if (res.topCategory === oldName) {
+                    res.topCategory = newName;
+                }
+            });
+
+            saveAndRefresh();
+            closeGlobalModal();
+        });
+    }
+
+    // 🔄 [신규] 대분류 카테고리 드래그 앤 드롭 순서 제어 알고리즘 모듈
+    let dragSourceIndex = null;
+
+    function handleCategoryDragStart(e) {
+        dragSourceIndex = this.getAttribute('data-index');
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', this.innerHTML);
+    }
+
+    function handleCategoryDragOver(e) {
+        if (e.preventDefault) e.preventDefault();
+        this.classList.add('bg-orange-50/50', 'border-theme-orange');
+        return false;
+    }
+
+    function handleCategoryDragEnd(e) {
+        this.classList.remove('dragging');
+        document.querySelectorAll('.category-draggable').forEach(box => {
+            box.classList.remove('bg-orange-50/50', 'border-theme-orange');
+        });
+    }
+
+    function handleCategoryDrop(e) {
+        if (e.stopPropagation) e.stopPropagation();
+        e.preventDefault();
+        
+        const targetIndex = this.getAttribute('data-index');
+        
+        if (dragSourceIndex !== null && dragSourceIndex !== targetIndex) {
+            // 원본 데이터 순서 스와프 및 가변 재배치
+            const movedItem = db.categories.splice(dragSourceIndex, 1)[0];
+            db.categories.splice(targetIndex, 0, movedItem);
+            
+            saveAndRefresh();
+        }
+        return false;
     }
 
     function showCategoryManageModal() {
@@ -674,10 +757,6 @@
         }
     }
 
-    // =========================================================
-    // 🍔 맛집 상세페이지 내부 및 메뉴/카테고리 복합 구조 CRUD
-    // =========================================================
-    
     function routeToDetail(id) {
         activeRestaurantId = id;
         const res = db.restaurants.find(r => r.id === id);
@@ -705,7 +784,6 @@
         renderMenusSubModule(res);
     }
 
-    // 📂 매장 내부 카테고리 트리 및 소속 메뉴 통합 렌더러 (설명란 'desc' UI 바인딩)
     function renderMenusSubModule(res) {
         const container = document.getElementById('restaurant-menu-category-container');
         container.innerHTML = "";
@@ -751,7 +829,6 @@
                                 <div class="min-w-0 flex-1">
                                     <p class="font-bold text-xs text-gray-800 truncate">${m.name}</p>
                                     <p class="text-xs text-theme-orange font-black mt-0.5">${parseInt(m.price).toLocaleString()}원</p>
-                                    <!-- 📝 추가된 메뉴 설명란 UI 디자인 -->
                                     ${m.desc ? `<p class="text-[11px] text-gray-400 leading-normal mt-1 border-t border-gray-50 pt-0.5">${m.desc}</p>` : ''}
                                 </div>
                             </div>
@@ -788,7 +865,6 @@
         });
     }
 
-    // [신규] 매장 전용 메뉴 카테고리 이름 수정
     function showEditMenuCategoryModal(catIdx) {
         const res = db.restaurants.find(r => r.id === activeRestaurantId);
         const targetCategory = res.menuCategories[catIdx];
@@ -816,7 +892,6 @@
         }
     }
 
-    // ➕ 카테고리별 메뉴 등록 모달 시스템 (설명란 'add-menu-desc' 인풋 추가)
     function showAddMenuModal() {
         const res = db.restaurants.find(r => r.id === activeRestaurantId);
         if (!res.menuCategories || res.menuCategories.length === 0) {
@@ -831,7 +906,6 @@
 
             <input id="add-menu-name" type="text" placeholder="메뉴 요리명 입력" class="w-full border p-2.5 rounded-xl text-xs mb-2">
             <input id="add-menu-price" type="number" placeholder="단품 가격 (숫자 입력)" class="w-full border p-2.5 rounded-xl text-xs mb-2">
-            <!-- 📝 추가된 메뉴 설명란 입력 폼 -->
             <input id="add-menu-desc" type="text" placeholder="메뉴 구성이나 특징 설명 (선택사항)" class="w-full border p-2.5 rounded-xl text-xs mb-2">
             
             <label class="text-[10px] text-blue-500 font-bold block">* 음식 연출컷 드래그 드롭 가능</label>
@@ -852,7 +926,6 @@
         });
     }
 
-    // ✏️ 메뉴 개별 편집 수정 (설명란 'edit-menu-desc' 인풋 및 바인딩 보정)
     function showEditMenuModal(catIdx, itemIdx) {
         const res = db.restaurants.find(r => r.id === activeRestaurantId);
         const menu = res.menuCategories[catIdx].items[itemIdx];
@@ -865,7 +938,6 @@
 
             <input id="edit-menu-name" type="text" value="${menu.name}" placeholder="메뉴 요리명 입력" class="w-full border p-2.5 rounded-xl text-xs mb-2">
             <input id="edit-menu-price" type="number" value="${menu.price}" placeholder="단품 가격 (숫자 입력)" class="w-full border p-2.5 rounded-xl text-xs mb-2">
-            <!-- 📝 추가된 메뉴 설명란 수정 폼 -->
             <input id="edit-menu-desc" type="text" value="${menu.desc || ''}" placeholder="메뉴 구성이나 특징 설명 (선택사항)" class="w-full border p-2.5 rounded-xl text-xs mb-2">
             
             <input id="edit-menu-img" type="text" value="${menu.img || ''}" placeholder="이미지 주소 링크 또는 파일 드래그" class="w-full border p-2.5 rounded-xl text-xs bg-gray-50"
@@ -901,9 +973,6 @@
         }
     }
 
-    // ==========================================
-    // 🛵 실시간 가짜 예약 제어 프로세스 모듈
-    // ==========================================
     let localPeopleCount = 2;
     function updatePeopleCount(change) {
         localPeopleCount = Math.max(1, localPeopleCount + change);
