@@ -27,8 +27,8 @@
             <div onclick="switchTab('home')" class="text-2xl font-black cursor-pointer tracking-tight flex items-center gap-1">
                 <i class="fa-solid fa-utensils text-xl"></i> 미스테이블
             </div>
-            <div class="flex items-center gap-2 text-xs font-medium opacity-90 bg-black/10 px-2 py-1 rounded-full">
-                <i class="fa-solid fa-location-dot"></i> <span id="current-location">서울특별시</span> ▼
+            <div onclick="switchTab('location')" class="flex items-center gap-2 text-xs font-medium opacity-90 bg-black/10 px-2.5 py-1.5 rounded-full cursor-pointer hover:bg-black/20">
+                <i class="fa-solid fa-location-dot"></i> <span id="current-location">전체 지역</span> ▼
             </div>
         </div>
         <div class="relative">
@@ -73,7 +73,7 @@
 
     <section id="tab-category" class="hidden">
         <div class="flex justify-between items-center mb-2 border-b pb-2">
-            <h2 class="text-xl font-black text-gray-900">음식 종류 / 카테고리 (3단계)</h2>
+            <h2 class="text-xl font-black text-gray-900">음식 종류 / 카테고리</h2>
             <button onclick="showCategoryManageModal()" class="text-xs font-bold bg-gray-100 text-gray-600 px-2.5 py-1.5 rounded-lg border hover:bg-gray-200">
                 <i class="fa-solid fa-plus"></i> 대분류 추가
             </button>
@@ -82,6 +82,19 @@
             <i class="fa-solid fa-circle-info text-orange-400"></i> 좌측 아이콘을 드래그하여 대분류 순서를 바꿀 수 있습니다.
         </p>
         <div id="category-tree-container" class="flex flex-col gap-4"></div>
+    </section>
+
+    <section id="tab-location" class="hidden">
+        <div class="flex justify-between items-center mb-2 border-b pb-2">
+            <h2 class="text-xl font-black text-gray-900">글로벌 4단계 지역 관리</h2>
+            <button onclick="showCountryAddModal()" class="text-xs font-bold theme-orange text-white px-2.5 py-1.5 rounded-lg shadow">
+                <i class="fa-solid fa-plus"></i> 국가 추가
+            </button>
+        </div>
+        <p class="text-[11px] text-gray-400 mb-4 font-medium">
+            <i class="fa-solid fa-circle-info text-orange-400"></i> 국가 ➔ 행정구역 ➔ 도시 ➔ 장소별로 세밀한 지역망을 제어 및 필터링합니다.
+        </p>
+        <div id="location-tree-container" class="flex flex-col gap-4"></div>
     </section>
 
     <section id="tab-search" class="hidden">
@@ -190,6 +203,9 @@
         <button onclick="switchTab('category')" id="nav-category" class="flex flex-col items-center gap-1 text-gray-400 font-medium flex-1 py-1">
             <i class="fa-solid fa-bars text-lg"></i><span class="text-[10px]">카테고리</span>
         </button>
+        <button onclick="switchTab('location')" id="nav-location" class="flex flex-col items-center gap-1 text-gray-400 font-medium flex-1 py-1">
+            <i class="fa-solid fa-map-location-dot text-lg"></i><span class="text-[10px]">지역설정</span>
+        </button>
         <button onclick="switchTab('search')" id="nav-search" class="flex flex-col items-center gap-1 text-gray-400 font-medium flex-1 py-1">
             <i class="fa-solid fa-magnifying-glass text-lg"></i><span class="text-[10px]">검색/목록</span>
         </button>
@@ -211,32 +227,55 @@
 </div>
 
 <script>
-    // 3단계 구조 데이터 스펙 정의 (대분류 > 중분류 > 소분류)
+    // 3단계 음식 카테고리 데이터 구조
     const initialCategories = [
         { 
-            id: 1, 
-            name: "한식", 
+            id: 1, name: "한식", 
             mid: [
                 { name: "육류구이", sub: ["한우", "삼겹살", "갈비찜"] },
-                { name: "식사류", sub: ["백반", "한정식", "영양밥"] },
-                { name: "탕/찌개", sub: ["김치찌개", "갈비탕", "동태탕"] }
+                { name: "식사류", sub: ["백반", "한정식", "영양밥"] }
             ] 
         },
         { 
-            id: 2, 
-            name: "일식", 
+            id: 2, name: "일식", 
             mid: [
                 { name: "고급다이닝", sub: ["오마카세", "가이세키"] },
-                { name: "스시/사시미", sub: ["활어초밥", "참치회"] },
-                { name: "면/튀김류", sub: ["돈카츠", "라멘", "소바"] }
+                { name: "스시/사시미", sub: ["활어초밥", "참치회"] }
             ] 
+        }
+    ];
+
+    // 🌐 [초기 4단계 확장 지역 데이터 명세 정의] (국가 > 행정구역 > 도시 > 장소)
+    const initialLocations = [
+        {
+            name: "대한민국",
+            provinces: [
+                {
+                    name: "서울특별시",
+                    cities: [
+                        { name: "강남구", localities: ["역삼동", "신사동", "압구정동"] },
+                        { name: "마포구", localities: ["서교동", "연남동", "망원동"] }
+                    ]
+                },
+                {
+                    name: "부산광역시",
+                    cities: [
+                        { name: "해운대구", localities: ["우동", "중동", "재송동"] },
+                        { name: "부산진구", localities: ["부전동", "전포동"] }
+                    ]
+                }
+            ]
         },
         {
-            id: 3,
-            name: "양식",
-            mid: [
-                { name: "이탈리안", sub: ["생면파스타", "화덕피자", "리소토"] },
-                { name: "스테이크하우스", sub: ["티본스테이크", "와인바"] }
+            name: "일본",
+            provinces: [
+                {
+                    name: "도쿄도",
+                    cities: [
+                        { name: "신주쿠구", localities: ["가부키초", "오쿠보"] },
+                        { name: "시부야구", localities: ["도겐자카", "진구마에"] }
+                    ]
+                }
             ]
         }
     ];
@@ -244,57 +283,40 @@
     const initialRestaurants = [
         {
             id: 101, name: "미식정 한우마을", topCategory: "한식", midCategory: "육류구이", subCategory: "한우",
+            country: "대한민국", province: "서울특별시", city: "강남구", locality: "역삼동",
             image: "", isFavorite: true, isRecommended: true, intro: "1++ 최고급 숙성 한우 명가입니다.",
             menuCategories: [
-                {
-                    name: "구이류 (추천)",
-                    items: [
-                        { name: "명품 한우 숙성 등심 (150g)", price: 48000, desc: "정밀하게 짜인 60일 wet-aging 기법으로 육즙이 풍부한 등심 부위", img: "" }
-                    ]
-                }
+                { name: "구이류 (추천)", items: [ { name: "명품 한우 숙성 등심 (150g)", price: 48000, desc: "", img: "" } ] }
             ]
         },
         {
             id: 102, name: "스시 타카시", topCategory: "일식", midCategory: "고급다이닝", subCategory: "오마카세",
+            country: "대한민국", province: "부산광역시", city: "해운대구", locality: "우동",
             image: "", isFavorite: false, isRecommended: true, intro: "동해안 당일 자연산 활어만을 취급하는 하이엔드 오마카세.",
             menuCategories: [
-                {
-                    name: "코스 요리",
-                    items: [
-                        { name: "런치 스시 코스", price: 60000, desc: "흰살 생선 위주로 구성된 실속형 미들급 스시 코스", img: "" }
-                    ]
-                }
-            ]
-        },
-        {
-            id: 103, name: "피렌체 테이블", topCategory: "양식", midCategory: "이탈리안", subCategory: "생면파스타",
-            image: "", isFavorite: true, isRecommended: false, intro: "정통 이탈리아 생면 파스타와 화덕 피자 전문점.",
-            menuCategories: [
-                {
-                    name: "메인 파스타",
-                    items: [
-                        { name: "트러플 크림 생면 파스타", price: 24000, desc: "이탈리아산 블랙 트러플 페이스트와 갓 뽑은 생면의 만남", img: "" }
-                    ]
-                }
+                { name: "코스 요리", items: [ { name: "런치 스시 코스", price: 60000, desc: "", img: "" } ] }
             ]
         }
     ];
 
     let currentTabId = "home";
     let activeRestaurantId = null;
+    let globalSelectedLocalityFilter = null; // 상단 헤더 지역 필터링 관리 바인딩용
     
-    // DB 버전 인덱스 업데이트 (v4 적용)
-    let db = JSON.parse(localStorage.getItem('mystable_db_v4')) || { 
+    // DB 버전 v5 업그레이드 마이그레이션 적용
+    let db = JSON.parse(localStorage.getItem('mystable_db_v5')) || { 
         categories: initialCategories, 
+        locations: initialLocations,
         restaurants: initialRestaurants,
         reservations: []
     };
 
     function initApp() {
-        // 기존 2단계 데이터 백업 및 3단계 스펙 보정 러프 스캐닝
         db.restaurants.forEach(res => {
-            if (!res.midCategory) res.midCategory = "일반"; 
-            if (!res.menuCategories) res.menuCategories = [];
+            if (!res.country) res.country = "대한민국";
+            if (!res.province) res.province = "서울특별시";
+            if (!res.city) res.city = "강남구";
+            if (!res.locality) res.locality = "역삼동";
         });
 
         const dateInput = document.getElementById('reserve-date');
@@ -307,9 +329,10 @@
     }
 
     function saveAndRefresh() {
-        localStorage.setItem('mystable_db_v4', JSON.stringify(db));
+        localStorage.setItem('mystable_db_v5', JSON.stringify(db));
         renderHomeDashboards();
         renderCategoryTree();
+        renderLocationTree(); // 신규 4단지역 뷰어 로드
         renderRestaurantListMaster();
         renderMyReservations();
         
@@ -324,16 +347,16 @@
         document.getElementById('restaurant-detail-view').classList.add('hidden');
         document.getElementById('reservation-status-view').classList.add('hidden');
         
-        const tabs = ['home', 'category', 'search', 'mymystable'];
+        const tabs = ['home', 'category', 'location', 'search', 'mymystable'];
         tabs.forEach(t => {
             const element = document.getElementById(`tab-${t}`);
             const navBtn = document.getElementById(`nav-${t}`);
             if(t === tabId) {
                 element.classList.remove('hidden');
-                navBtn.className = "flex flex-col items-center gap-1 text-theme-orange font-bold flex-1 py-1";
+                if(navBtn) navBtn.className = "flex flex-col items-center gap-1 text-theme-orange font-bold flex-1 py-1";
             } else {
                 element.classList.add('hidden');
-                navBtn.className = "flex flex-col items-center gap-1 text-gray-400 font-medium flex-1 py-1";
+                if(navBtn) navBtn.className = "flex flex-col items-center gap-1 text-gray-400 font-medium flex-1 py-1";
             }
         });
         window.scrollTo(0, 0);
@@ -345,11 +368,16 @@
         recommendBox.innerHTML = "";
         favoriteBox.innerHTML = "";
 
-        const recList = db.restaurants.filter(r => r.isRecommended);
-        const favList = db.restaurants.filter(r => r.isFavorite);
+        // 상단 지역 필터 컨텍스트 연동
+        const filteredList = globalSelectedLocalityFilter 
+            ? db.restaurants.filter(r => r.locality === globalSelectedLocalityFilter)
+            : db.restaurants;
+
+        const recList = filteredList.filter(r => r.isRecommended);
+        const favList = filteredList.filter(r => r.isFavorite);
 
         if(recList.length === 0) {
-            recommendBox.innerHTML = `<div class="col-span-2 text-center py-6 text-xs text-gray-400 bg-white rounded-xl border border-dashed">추천 맛집이 없습니다.</div>`;
+            recommendBox.innerHTML = `<div class="col-span-2 text-center py-6 text-xs text-gray-400 bg-white rounded-xl border border-dashed">해당 지역에 추천 맛집이 없습니다.</div>`;
         } else {
             recList.forEach(res => {
                 const card = document.createElement('div');
@@ -363,7 +391,7 @@
                     <div class="p-3 flex-1 flex flex-col justify-between">
                         <div>
                             <h4 class="font-bold text-gray-800 text-xs truncate">${res.name}</h4>
-                            <p class="text-[9px] text-gray-400 mt-0.5">${res.topCategory} > ${res.midCategory}</p>
+                            <p class="text-[9px] text-gray-400 mt-0.5">${res.province} ➔ ${res.locality}</p>
                         </div>
                         <span class="text-[10px] text-theme-orange font-bold mt-2 inline-block">바로 예약 ⚡</span>
                     </div>
@@ -386,7 +414,7 @@
                     <div class="flex-1 min-w-0">
                         <div class="flex justify-between items-center">
                             <h4 class="font-bold text-gray-800 text-xs truncate">${res.name}</h4>
-                            <span class="text-[10px] text-gray-400 font-normal">${res.subCategory}</span>
+                            <span class="text-[10px] text-gray-400 font-normal">${res.locality}</span>
                         </div>
                         <p class="text-[11px] text-gray-400 truncate mt-0.5">${res.intro || '매장 한줄 소개가 없습니다.'}</p>
                     </div>
@@ -396,7 +424,7 @@
         }
     }
 
-    // 📁 [3단계 대변혁] 카테고리 트리 렌더러 컴포넌트 리액터
+    // 📁 [3단계] 카테고리 트리 렌더러
     function renderCategoryTree() {
         const container = document.getElementById('category-tree-container');
         container.innerHTML = "";
@@ -468,149 +496,212 @@
         });
     }
 
-    // ✏️ [대분류 수정 모달 + Cascade 연동 알고리즘]
-    function showEditTopCategoryModal(mainIdx) {
-        const target = db.categories[mainIdx];
-        const oldName = target.name;
+    // 🗺️ [4단계 글로벌 핵심엔진] 국>행>도>장 지역 트리 관리 렌더러 컴포넌트
+    function renderLocationTree() {
+        const container = document.getElementById('location-tree-container');
+        container.innerHTML = "";
 
-        openGlobalModal("대분류 카테고리명 수정", `
-            <label class="text-xs font-bold text-gray-500 block mb-1">변경할 대분류 코드명</label>
-            <input id="modal-input-edit-topcat" type="text" value="${oldName}" class="w-full border p-2 rounded-xl text-sm">
-            <p class="text-[10px] text-red-400 mt-1">* 소속 가맹점 매장의 상위 대분류 카테고리 정보도 실시간 일괄 업데이트(Cascade) 연동됩니다.</p>
-        `, () => {
-            const newName = document.getElementById('modal-input-edit-topcat').value.trim();
-            if(!newName) return alert("이름을 입력하세요.");
-            if(oldName !== newName && db.categories.some(c => c.name === newName)) return alert("중복된 카테고리 이름입니다.");
+        if(!db.locations || db.locations.length === 0) {
+            container.innerHTML = `<div class="text-center py-10 bg-white border border-dashed rounded-xl text-xs text-gray-400">등록된 국가 정보가 완전히 비어있습니다.</div>`;
+            return;
+        }
 
-            target.name = newName;
+        db.locations.forEach((cnt, cIdx) => {
+            const cBox = document.createElement('div');
+            cBox.className = "bg-white p-4 rounded-xl shadow-sm border border-gray-200/80 flex flex-col gap-2";
             
-            // 가맹점 마스터 Cascade 동기화 보정
-            db.restaurants.forEach(res => {
-                if (res.topCategory === oldName) res.topCategory = newName;
-            });
+            let html = `
+                <div class="flex justify-between items-center border-b pb-2">
+                    <span class="font-black text-sm text-gray-900 flex items-center gap-1">
+                        <i class="fa-solid fa-earth-asia text-blue-500"></i> <span class="text-blue-600">[국가]</span> ${cnt.name}
+                    </span>
+                    <div class="flex gap-1">
+                        <button onclick="showCountryEditModal(${cIdx})" class="text-[10px] bg-gray-50 border px-1.5 py-0.5 rounded font-bold">이름 수정</button>
+                        <button onclick="addProvinceDirect(${cIdx})" class="text-[10px] bg-orange-50 text-theme-orange border border-orange-200 px-1.5 py-0.5 rounded font-bold">+ 행정구역 추가</button>
+                        <button onclick="deleteCountryDirect(${cIdx})" class="text-[10px] text-red-500 px-1 hover:bg-red-50 rounded">삭제</button>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-3 pl-3 mt-1 border-l-2 border-slate-100">
+            `;
 
-            saveAndRefresh();
-            closeGlobalModal();
+            if(cnt.provinces.length === 0) {
+                html += `<p class="text-xs text-gray-400 italic py-1">하위 행정구역(시/도)이 없습니다.</p>`;
+            } else {
+                cnt.provinces.forEach((prov, pIdx) => {
+                    html += `
+                        <div class="bg-slate-50/60 p-2.5 rounded-lg border border-slate-200/60">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold text-gray-800"><span class="text-orange-500">[행정구역]</span> ${prov.name}</span>
+                                <div class="flex gap-1 scale-90">
+                                    <button onclick="showProvinceEditModal(${cIdx}, ${pIdx})" class="text-[9px] bg-white border px-1.5 py-0.5 rounded">수정</button>
+                                    <button onclick="addCityDirect(${cIdx}, ${pIdx})" class="text-[9px] bg-blue-50 text-blue-600 border border-blue-200 px-1.5 py-0.5 rounded font-bold">+ 도시 추가</button>
+                                    <button onclick="deleteProvinceDirect(${cIdx}, ${pIdx})" class="text-[9px] text-red-400 px-1">삭제</button>
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-2 pl-2 border-l border-dashed border-gray-300">
+                    `;
+
+                    if(prov.cities.length === 0) {
+                        html += `<p class="text-[11px] text-gray-400 italic">하위 도시(시/군/구) 없음</p>`;
+                    } else {
+                        prov.cities.forEach((cty, ctIdx) => {
+                            html += `
+                                <div class="bg-white p-2 rounded border border-gray-100 shadow-2xs">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-[11px] font-bold text-gray-700"><span class="text-green-600">[도시]</span> ${cty.name}</span>
+                                        <div class="flex gap-1 scale-75 origin-right">
+                                            <button onclick="showCityEditModal(${cIdx}, ${pIdx}, ${ctIdx})" class="text-[9px] bg-gray-50 border px-1 rounded">수정</button>
+                                            <button onclick="addLocalityDirect(${cIdx}, ${pIdx}, ${ctIdx})" class="text-[9px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-1 rounded font-bold">+ 장소 추가</button>
+                                            <button onclick="deleteCityDirect(${cIdx}, ${pIdx}, ${ctIdx})" class="text-[9px] text-red-400 px-1">삭제</button>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-wrap gap-1 mt-1">
+                            `;
+
+                            if(!cty.localities || cty.localities.length === 0) {
+                                html += `<span class="text-[10px] text-gray-400 italic">하위 세부 장소 없음</span>`;
+                            } else {
+                                cty.localities.forEach((loc, lIdx) => {
+                                    html += `
+                                        <span class="inline-flex items-center gap-1 bg-amber-50/60 text-gray-700 text-[10px] font-semibold px-2 py-0.5 rounded-md border border-amber-200/70 cursor-pointer hover:bg-orange-500 hover:text-white"
+                                              onclick="filterBy4TierLocation('${cnt.name}', '${prov.name}', '${cty.name}', '${loc}')">
+                                            📍 ${loc}
+                                            <i class="fa-solid fa-xmark text-[8px] opacity-60 hover:text-red-600 pl-0.5" onclick="event.stopPropagation(); deleteLocalityDirect(${cIdx}, ${pIdx}, ${ctIdx}, ${lIdx})"></i>
+                                        </span>
+                                    `;
+                                });
+                            }
+                            html += `</div></div>`;
+                        });
+                    }
+                    html += `</div></div>`;
+                });
+            }
+
+            html += `</div>`;
+            cBox.innerHTML = html;
+            container.appendChild(cBox);
         });
     }
 
-    // ✏️ [중분류 수정 모달 + Cascade 연동 알고리즘 추가]
-    function showEditMidCategoryModal(mainIdx, midIdx) {
-        const targetTop = db.categories[mainIdx];
-        const targetMid = targetTop.mid[midIdx];
-        const oldMidName = targetMid.name;
-
-        openGlobalModal("중분류 카테고리명 수정", `
-            <label class="text-xs font-bold text-gray-500 block mb-1">[${targetTop.name}] 내부 중분류 수정</label>
-            <input id="modal-input-edit-midcat" type="text" value="${oldMidName}" class="w-full border p-2 rounded-xl text-sm">
-            <p class="text-[10px] text-red-400 mt-1">* 소속 맛집들의 중분류 명칭 정보도 안전하게 일괄 업데이트 처리됩니다.</p>
+    // 🗺️ [지역 CRUD 상세 액션 핸들러 구현 모듈]
+    function showCountryAddModal() {
+        openGlobalModal("신규 국가 데이터 생성", `
+            <input id="modal-input-country" type="text" placeholder="예: 대한민국, 미국, 프랑스" class="w-full border p-2 rounded-xl text-sm">
         `, () => {
-            const newMidName = document.getElementById('modal-input-edit-midcat').value.trim();
-            if(!newMidName) return alert("중분류 이름은 필수 항목입니다.");
-            if(oldMidName !== newMidName && targetTop.mid.some(m => m.name === newMidName)) return alert("현재 대분류 내에 동일한 중분류가 존재합니다.");
-
-            targetMid.name = newMidName;
-
-            // 가맹점 동시 동기화 추적
-            db.restaurants.forEach(res => {
-                if (res.topCategory === targetTop.name && res.midCategory === oldMidName) {
-                    res.midCategory = newMidName;
-                }
-            });
-
-            saveAndRefresh();
-            closeGlobalModal();
+            const val = document.getElementById('modal-input-country').value.trim();
+            if(!val) return alert("국가 명칭은 필수입니다.");
+            if(db.locations.some(l => l.name === val)) return alert("이미 등록된 국가입니다.");
+            db.locations.push({ name: val, provinces: [] });
+            saveAndRefresh(); closeGlobalModal();
         });
     }
 
-    function showCategoryManageModal() {
-        openGlobalModal("대분류 카테고리 추가", `
-            <input id="modal-input-topcat" type="text" placeholder="예: 아시안푸드, 베이커리" class="w-full border p-2 rounded-xl text-sm">
+    function showCountryEditModal(cIdx) {
+        const target = db.locations[cIdx];
+        const old = target.name;
+        openGlobalModal("국가 정보 수정 (Cascade 연동)", `
+            <input id="modal-input-edit-country" type="text" value="${old}" class="w-full border p-2 rounded-xl text-sm">
         `, () => {
-            const val = document.getElementById('modal-input-topcat').value.trim();
-            if(!val) return alert("필수 입력");
-            if(db.categories.some(c => c.name === val)) return alert("중복 명칭 존재");
-
-            db.categories.push({ id: Date.now(), name: val, mid: [] });
-            saveAndRefresh();
-            closeGlobalModal();
+            const n = document.getElementById('modal-input-edit-country').value.trim();
+            if(!n) return;
+            target.name = n;
+            db.restaurants.forEach(r => { if(r.country === old) r.country = n; });
+            saveAndRefresh(); closeGlobalModal();
         });
     }
 
-    function addMidCategoryDirect(mainIdx) {
-        const midName = prompt(`[${db.categories[mainIdx].name}] 하위에 배정할 새로운 중분류명을 입력하세요:`);
-        if(midName && midName.trim() !== "") {
-            const trimmed = midName.trim();
-            if(db.categories[mainIdx].mid.some(m => m.name === trimmed)) return alert("중복된 중분류 이름이 존재합니다.");
-            db.categories[mainIdx].mid.push({ name: trimmed, sub: [] });
+    function addProvinceDirect(cIdx) {
+        const pName = prompt(`[${db.locations[cIdx].name}] 산하에 배정할 새로운 행정구역(시/도) 명칭을 기입하세요:`);
+        if(pName && pName.trim() !== "") {
+            const trimmed = pName.trim();
+            if(db.locations[cIdx].provinces.some(p => p.name === trimmed)) return alert("중복된 행정구역이 존재합니다.");
+            db.locations[cIdx].provinces.push({ name: trimmed, cities: [] });
             saveAndRefresh();
         }
     }
 
-    function addSubCategoryDirect(mainIdx, midIdx) {
-        const subName = prompt(`[${db.categories[mainIdx].name} > ${db.categories[mainIdx].mid[midIdx].name}] 하위 세부 소분류 기입:`);
-        if(subName && subName.trim() !== "") {
-            const trimmed = subName.trim();
-            if(db.categories[mainIdx].mid[midIdx].sub.includes(trimmed)) return alert("이미 존재합니다.");
-            db.categories[mainIdx].mid[midIdx].sub.push(trimmed);
-            saveAndRefresh();
-        }
-    }
-
-    function deleteTopCategoryDirect(mainIdx) {
-        if(confirm("대분류 파기 시 산하 하위 카테고리 스펙이 완전히 소멸됩니다. 파기하시겠습니까?")) {
-            db.categories.splice(mainIdx, 1);
-            saveAndRefresh();
-        }
-    }
-
-    function deleteMidCategoryDirect(mainIdx, midIdx) {
-        if(confirm("선택한 중분류를 삭제하시겠습니까?")) {
-            db.categories[mainIdx].mid.splice(midIdx, 1);
-            saveAndRefresh();
-        }
-    }
-
-    function deleteSubCategoryDirect(mainIdx, midIdx, subIdx) {
-        if(confirm("소분류 요소를 파기처리합니까?")) {
-            db.categories[mainIdx].mid[midIdx].sub.splice(subIdx, 1);
-            saveAndRefresh();
-        }
-    }
-
-    // 🔄 드래그 앤 드롭 정렬 알고리즘 모듈 유지
-    let dragSourceIndex = null;
-    function handleCategoryDragStart(e) {
-        dragSourceIndex = this.getAttribute('data-index');
-        this.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-    }
-    function handleCategoryDragOver(e) {
-        if (e.preventDefault) e.preventDefault();
-        this.classList.add('bg-orange-50/50', 'border-theme-orange');
-        return false;
-    }
-    function handleCategoryDragEnd(e) {
-        this.classList.remove('dragging');
-        document.querySelectorAll('.category-draggable').forEach(box => {
-            box.classList.remove('bg-orange-50/50', 'border-theme-orange');
+    function showProvinceEditModal(cIdx, pIdx) {
+        const target = db.locations[cIdx].provinces[pIdx];
+        const old = target.name;
+        openGlobalModal("행정구역명 수정", `
+            <input id="modal-input-edit-prov" type="text" value="${old}" class="w-full border p-2 rounded-xl text-sm">
+        `, () => {
+            const n = document.getElementById('modal-input-edit-prov').value.trim();
+            if(!n) return;
+            target.name = n;
+            db.restaurants.forEach(r => { if(r.country === db.locations[cIdx].name && r.province === old) r.province = n; });
+            saveAndRefresh(); closeGlobalModal();
         });
     }
-    function handleCategoryDrop(e) {
-        if (e.stopPropagation) e.stopPropagation();
-        e.preventDefault();
-        const targetIndex = this.getAttribute('data-index');
-        if (dragSourceIndex !== null && dragSourceIndex !== targetIndex) {
-            const movedItem = db.categories.splice(dragSourceIndex, 1)[0];
-            db.categories.splice(targetIndex, 0, movedItem);
+
+    function addCityDirect(cIdx, pIdx) {
+        const cityName = prompt(`[${db.locations[cIdx].provinces[pIdx].name}] 내부에 종속시킬 도시(시/군/구)명을 입력하세요:`);
+        if(cityName && cityName.trim() !== "") {
+            const trimmed = cityName.trim();
+            if(db.locations[cIdx].provinces[pIdx].cities.some(c => c.name === trimmed)) return alert("중복 명칭 존재.");
+            db.locations[cIdx].provinces[pIdx].cities.push({ name: trimmed, localities: [] });
             saveAndRefresh();
         }
-        return false;
+    }
+
+    function showCityEditModal(cIdx, pIdx, ctIdx) {
+        const target = db.locations[cIdx].provinces[pIdx].cities[ctIdx];
+        const old = target.name;
+        openGlobalModal("도시 명칭 수정", `
+            <input id="modal-input-edit-city" type="text" value="${old}" class="w-full border p-2 rounded-xl text-sm">
+        `, () => {
+            const n = document.getElementById('modal-input-edit-city').value.trim();
+            if(!n) return;
+            target.name = n;
+            db.restaurants.forEach(r => { 
+                if(r.country === db.locations[cIdx].name && r.province === db.locations[cIdx].provinces[pIdx].name && r.city === old) r.city = n; 
+            });
+            saveAndRefresh(); closeGlobalModal();
+        });
+    }
+
+    function addLocalityDirect(cIdx, pIdx, ctIdx) {
+        const locName = prompt(`[${db.locations[cIdx].provinces[pIdx].cities[ctIdx].name}] 세부 상세 장소(동/읍/면/리 등)를 등록합니다:`);
+        if(locName && locName.trim() !== "") {
+            const trimmed = locName.trim();
+            if(db.locations[cIdx].provinces[pIdx].cities[ctIdx].localities.includes(trimmed)) return alert("이미 가용 범주에 지정되어 있습니다.");
+            db.locations[cIdx].provinces[pIdx].cities[ctIdx].localities.push(trimmed);
+            saveAndRefresh();
+        }
+    }
+
+    function deleteCountryDirect(cIdx) {
+        if(confirm("국가를 파기하면 속해있는 하위 행정 인프라 정보가 영구 소멸됩니다. 진행합니까?")) {
+            db.locations.splice(cIdx, 1); saveAndRefresh();
+        }
+    }
+    function deleteProvinceDirect(cIdx, pIdx) {
+        if(confirm("선택 구역을 일괄 파기처리 합니까?")) {
+            db.locations[cIdx].provinces.splice(pIdx, 1); saveAndRefresh();
+        }
+    }
+    function deleteCityDirect(cIdx, pIdx, ctIdx) {
+        if(confirm("해당 도시 요소를 리스트에서 삭제합니다.")) {
+            db.locations[cIdx].provinces[pIdx].cities.splice(ctIdx, 1); saveAndRefresh();
+        }
+    }
+    function deleteLocalityDirect(cIdx, pIdx, ctIdx, lIdx) {
+        if(confirm("세부 장소 데이터를 파기합니까?")) {
+            db.locations[cIdx].provinces[pIdx].cities[ctIdx].localities.splice(lIdx, 1); saveAndRefresh();
+        }
+    }
+
+    // 🔄 필터 바인딩 인터페이스 모듈 연동
+    function filterBy4TierLocation(country, province, city, locality) {
+        globalSelectedLocalityFilter = locality;
+        document.getElementById('current-location').innerText = `${province} ${locality}`;
+        switchTab('home');
     }
 
     function filterBy3TierCategory(top, mid, sub) {
         switchTab('search');
-        document.getElementById('search-title-text').innerText = `🔍 필터: ${top} > ${mid} > ${sub}`;
+        document.getElementById('search-title-text').innerText = `🔍 카테고리 필터: ${top} > ${mid} > ${sub}`;
         renderFilteredRestaurants(r => r.topCategory === top && r.midCategory === mid && r.subCategory === sub);
     }
 
@@ -627,9 +718,10 @@
         renderFilteredRestaurants(r => 
             r.name.includes(query) || 
             r.topCategory.includes(query) || 
-            (r.midCategory && r.midCategory.includes(query)) ||
             r.subCategory.includes(query) ||
-            (r.intro && r.intro.includes(query))
+            r.province.includes(query) ||
+            r.city.includes(query) ||
+            r.locality.includes(query)
         );
     }
 
@@ -641,7 +733,7 @@
         const list = db.restaurants.filter(filterPredicate);
 
         if(list.length === 0) {
-            container.innerHTML = `<div class="text-center py-12 bg-white rounded-2xl border border-dashed p-6 text-gray-400 text-xs">일치하는 가맹점 가짜 맛집 정보가 존재하지 않습니다.</div>`;
+            container.innerHTML = `<div class="text-center py-12 bg-white rounded-2xl border border-dashed p-6 text-gray-400 text-xs">데이터 정보가 존재하지 않습니다.</div>`;
             return;
         }
 
@@ -659,8 +751,8 @@
                             <h4 class="font-black text-gray-900 text-sm truncate">${res.name}</h4>
                             ${res.isRecommended ? `<span class="bg-amber-100 text-amber-700 font-bold text-[9px] px-1.5 py-0.5 rounded">MD추천</span>` : ''}
                         </div>
-                        <p class="text-[10px] text-gray-400 font-medium mt-0.5">${res.topCategory} > ${res.midCategory || '일반'} > ${res.subCategory}</p>
-                        <p class="text-xs text-gray-500 truncate mt-1">${res.intro || '매장 슬로건이 비어있습니다.'}</p>
+                        <p class="text-[10px] text-gray-400 font-medium mt-0.5"><i class="fa-solid fa-map-pin text-[9px] text-orange-400"></i> ${res.province} ${res.city} ${res.locality}</p>
+                        <p class="text-[10px] text-gray-400 font-medium">${res.topCategory} > ${res.subCategory}</p>
                     </div>
                 </div>
                 <div class="flex justify-between items-center border-t pt-2 mt-1">
@@ -682,147 +774,271 @@
         if(res) { res.isFavorite = !res.isFavorite; saveAndRefresh(); }
     }
 
-    // 📋 [신규 맛집 가맹 등록 모달 - 3단 종속 선택 제어 모듈 설계]
+    // 📋 [가맹점 신규 등록 모달 - 4단 종속 선택 제어 모듈 완전 설계]
     function showAddRestaurantModal() {
+        let countryOptions = db.locations.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
         let topOptions = db.categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
 
-        openGlobalModal("가짜 맛집 신규 등록 (3단계 적용)", `
+        openGlobalModal("가짜 맛집 신규 등록 (4단 지역망 적용)", `
             <input id="add-res-name" type="text" placeholder="식당명 입력" class="w-full border p-2.5 rounded-xl text-xs mb-2">
-            <div class="flex flex-col gap-2 mb-2 bg-gray-50 p-2 rounded-xl border">
-                <div>
-                    <label class="text-[10px] text-gray-400 font-bold block">1단계 대분류</label>
-                    <select id="add-res-topcat" onchange="sync3TierModalCategorySelect('add-res-topcat', 'add-res-midcat', 'add-res-subcat')" class="w-full border p-1.5 bg-white text-xs rounded-lg">${topOptions}</select>
-                </div>
-                <div>
-                    <label class="text-[10px] text-gray-400 font-bold block">2단계 중분류</label>
-                    <select id="add-res-midcat" onchange="sync3TierModalSubSelectOnly('add-res-topcat', 'add-res-midcat', 'add-res-subcat')" class="w-full border p-1.5 bg-white text-xs rounded-lg"></select>
-                </div>
-                <div>
-                    <label class="text-[10px] text-gray-400 font-bold block">3단계 소분류</label>
-                    <select id="add-res-subcat" class="w-full border p-1.5 bg-white text-xs rounded-lg"></select>
+            
+            <div class="flex flex-col gap-2 mb-2 bg-slate-50 p-2 rounded-xl border text-[11px]">
+                <p class="font-bold text-orange-500"><i class="fa-solid fa-circle-nodes"></i> 위치 매칭 계층망 설정</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-gray-400 font-bold block">1단계 국가</label>
+                        <select id="add-res-country" onchange="sync4TierLocationChain('add-res-country', 'add-res-province', 'add-res-city', 'add-res-locality')" class="w-full border p-1 bg-white rounded">${countryOptions}</select>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 font-bold block">2단계 행정구역</label>
+                        <select id="add-res-province" onchange="sync4TierProvinceToCity('add-res-country', 'add-res-province', 'add-res-city', 'add-res-locality')" class="w-full border p-1 bg-white rounded"></select>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 font-bold block">3단계 도시(구)</label>
+                        <select id="add-res-city" onchange="sync4TierCityToLocality('add-res-country', 'add-res-province', 'add-res-city', 'add-res-locality')" class="w-full border p-1 bg-white rounded"></select>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 font-bold block">4단계 장소(동)</label>
+                        <select id="add-res-locality" class="w-full border p-1 bg-white rounded"></select>
+                    </div>
                 </div>
             </div>
+
+            <div class="flex flex-col gap-2 mb-2 bg-amber-50/50 p-2 rounded-xl border text-[11px]">
+                <p class="font-bold text-amber-600"><i class="fa-solid fa-utensils"></i> 카테고리 기입</p>
+                <select id="add-res-topcat" class="w-full border p-1 bg-white rounded">${topOptions}</select>
+                <input id="add-res-subcat" type="text" placeholder="소분류 명칭 기입 (예: 생면파스타, 오마카세)" class="w-full border p-1 bg-white rounded mt-1">
+            </div>
+
             <input id="add-res-intro" type="text" placeholder="매장 요약 한 줄 소개 메시지" class="w-full border p-2.5 rounded-xl text-xs mb-2">
             <div class="flex gap-4 p-2 border rounded-xl bg-gray-50 items-center justify-between text-xs font-bold">
                 <label>MD 추천 맛집 지정</label>
                 <input type="checkbox" id="add-res-recommend" class="accent-orange-500 w-4 h-4">
             </div>
-            <input id="add-res-img" type="text" placeholder="이미지 URL 주소 입력" class="w-full border p-2.5 rounded-xl text-xs bg-gray-50 mt-2">
         `, () => {
             const name = document.getElementById('add-res-name').value.trim();
+            const country = document.getElementById('add-res-country').value;
+            const province = document.getElementById('add-res-province').value;
+            const city = document.getElementById('add-res-city').value;
+            const locality = document.getElementById('add-res-locality').value;
             const topCategory = document.getElementById('add-res-topcat').value;
-            const midCategory = document.getElementById('add-res-midcat').value;
-            const subCategory = document.getElementById('add-res-subcat').value;
+            const subCategory = document.getElementById('add-res-subcat').value.trim() || "일반";
             const intro = document.getElementById('add-res-intro').value.trim();
             const isRecommended = document.getElementById('add-res-recommend').checked;
-            const image = document.getElementById('add-res-img').value;
 
-            if(!name) return alert("식당 이름 명칭 누락 불가");
+            if(!name) return alert("식당 명칭은 필수 기입요소입니다.");
 
             db.restaurants.push({
-                id: Date.now(), name, topCategory, midCategory, subCategory, intro, isRecommended, isFavorite: false, image, menuCategories: []
+                id: Date.now(), name, country, province, city, locality, topCategory, midCategory: "일반", subCategory, intro, isRecommended, isFavorite: false, image: "", menuCategories: []
             });
-            saveAndRefresh();
-            closeGlobalModal();
+            saveAndRefresh(); closeGlobalModal();
         });
 
-        sync3TierModalCategorySelect('add-res-topcat', 'add-res-midcat', 'add-res-subcat');
+        sync4TierLocationChain('add-res-country', 'add-res-province', 'add-res-city', 'add-res-locality');
     }
 
-    // 📋 [기존 맛집 정보 수정 모달 수정 - 3단 종속 선택 제어 모듈 설계]
+    // 📋 [기존 맛집 가맹수정 모달 - 4단 종속 프로세스 적용]
     function showEditRestaurantModal(id) {
         const res = db.restaurants.find(r => r.id === id);
         if(!res) return;
 
-        let topOptions = db.categories.map(c => `<option value="${c.name}" ${res.topCategory === c.name ? 'selected' : ''}>${c.name}</option>`).join('');
+        let countryOptions = db.locations.map(l => `<option value="${l.name}" ${res.country === l.name?'selected':''}>${l.name}</option>`).join('');
+        let topOptions = db.categories.map(c => `<option value="${c.name}" ${res.topCategory === c.name?'selected':''}>${c.name}</option>`).join('');
 
-        openGlobalModal("매장 정보 수정 (3단계 적용)", `
+        openGlobalModal("매장 정보 수정 (4단 지역망 제어)", `
             <input id="edit-res-name" type="text" value="${res.name}" class="w-full border p-2.5 rounded-xl text-xs mb-2">
-            <div class="flex flex-col gap-2 mb-2 bg-gray-50 p-2 rounded-xl border">
-                <div>
-                    <label class="text-[10px] text-gray-400 font-bold block">1단계 대분류</label>
-                    <select id="edit-res-topcat" onchange="sync3TierModalCategorySelect('edit-res-topcat', 'edit-res-midcat', 'edit-res-subcat')" class="w-full border p-1.5 bg-white text-xs rounded-lg">${topOptions}</select>
-                </div>
-                <div>
-                    <label class="text-[10px] text-gray-400 font-bold block">2단계 중분류</label>
-                    <select id="edit-res-midcat" onchange="sync3TierModalSubSelectOnly('edit-res-topcat', 'edit-res-midcat', 'edit-res-subcat')" class="w-full border p-1.5 bg-white text-xs rounded-lg"></select>
-                </div>
-                <div>
-                    <label class="text-[10px] text-gray-400 font-bold block">3단계 소분류</label>
-                    <select id="edit-res-subcat" class="w-full border p-1.5 bg-white text-xs rounded-lg"></select>
+            
+            <div class="flex flex-col gap-2 mb-2 bg-slate-50 p-2 rounded-xl border text-[11px]">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-gray-400 font-bold block">1단계 국가</label>
+                        <select id="edit-res-country" onchange="sync4TierLocationChain('edit-res-country', 'edit-res-province', 'edit-res-city', 'edit-res-locality')" class="w-full border p-1 bg-white rounded">${countryOptions}</select>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 font-bold block">2단계 행정구역</label>
+                        <select id="edit-res-province" onchange="sync4TierProvinceToCity('edit-res-country', 'edit-res-province', 'edit-res-city', 'edit-res-locality')" class="w-full border p-1 bg-white rounded"></select>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 font-bold block">3단계 도시(구)</label>
+                        <select id="edit-res-city" onchange="sync4TierCityToLocality('edit-res-country', 'edit-res-province', 'edit-res-city', 'edit-res-locality')" class="w-full border p-1 bg-white rounded"></select>
+                    </div>
+                    <div>
+                        <label class="text-gray-400 font-bold block">4단계 장소(동)</label>
+                        <select id="edit-res-locality" class="w-full border p-1 bg-white rounded"></select>
+                    </div>
                 </div>
             </div>
+
+            <div class="flex flex-col gap-2 mb-2 bg-amber-50/50 p-2 rounded-xl border text-[11px]">
+                <select id="edit-res-topcat" class="w-full border p-1 bg-white rounded">${topOptions}</select>
+                <input id="edit-res-subcat" type="text" value="${res.subCategory}" class="w-full border p-1 bg-white rounded mt-1">
+            </div>
+
             <input id="edit-res-intro" type="text" value="${res.intro || ''}" class="w-full border p-2.5 rounded-xl text-xs mb-2">
-            <div class="flex gap-4 p-2 border rounded-xl bg-gray-50 items-center justify-between text-xs font-bold">
-                <label>MD 추천 맛집 지정</label>
-                <input type="checkbox" id="edit-res-recommend" ${res.isRecommended ? 'checked' : ''} class="accent-orange-500 w-4 h-4">
-            </div>
-            <input id="edit-res-img" type="text" value="${res.image || ''}" class="w-full border p-2.5 rounded-xl text-xs bg-gray-50 mt-2">
         `, () => {
             res.name = document.getElementById('edit-res-name').value.trim();
+            res.country = document.getElementById('edit-res-country').value;
+            res.province = document.getElementById('edit-res-province').value;
+            res.city = document.getElementById('edit-res-city').value;
+            res.locality = document.getElementById('edit-res-locality').value;
             res.topCategory = document.getElementById('edit-res-topcat').value;
-            res.midCategory = document.getElementById('edit-res-midcat').value;
-            res.subCategory = document.getElementById('edit-res-subcat').value;
+            res.subCategory = document.getElementById('edit-res-subcat').value.trim() || "일반";
             res.intro = document.getElementById('edit-res-intro').value.trim();
-            res.isRecommended = document.getElementById('edit-res-recommend').checked;
-            res.image = document.getElementById('edit-res-img').value;
 
-            if(!res.name) return alert("식당 이름 공란 처리 불가");
-            saveAndRefresh();
-            closeGlobalModal();
+            if(!res.name) return alert("식당 이름 누락 불가");
+            saveAndRefresh(); closeGlobalModal();
         });
 
-        sync3TierModalCategorySelect('edit-res-topcat', 'edit-res-midcat', 'edit-res-subcat', res.midCategory, res.subCategory);
+        sync4TierLocationChain('edit-res-country', 'edit-res-province', 'edit-res-city', 'edit-res-locality', res.province, res.city, res.locality);
     }
 
-    // 🔄 [3단 가변 체인 연동 알고리즘 모듈의 핵심 엔진]
-    function sync3TierModalCategorySelect(topId, midId, subId, preMid = "", preSub = "") {
-        const topVal = document.getElementById(topId).value;
-        const midSelect = document.getElementById(midId);
-        midSelect.innerHTML = "";
+    // 🔄 [4단계 컴포넌트 하이엔드 가변 체인 동기화 엔진 함수 알고리즘 설계]
+    function sync4TierLocationChain(cntId, provId, ctyId, locId, preProv="", preCty="", preLoc="") {
+        const cVal = document.getElementById(cntId).value;
+        const pSelect = document.getElementById(provId);
+        pSelect.innerHTML = "";
 
-        const matchCat = db.categories.find(c => c.name === topVal);
-        if(matchCat && matchCat.mid.length > 0) {
-            matchCat.mid.forEach(m => {
+        const match = db.locations.find(l => l.name === cVal);
+        if(match && match.provinces.length > 0) {
+            match.provinces.forEach(p => {
                 const opt = document.createElement('option');
-                opt.value = m.name; opt.innerText = m.name;
-                if(m.name === preMid) opt.selected = true;
-                midSelect.appendChild(opt);
+                opt.value = p.name; opt.innerText = p.name;
+                if(p.name === preProv) opt.selected = true;
+                pSelect.appendChild(opt);
             });
         } else {
-            midSelect.innerHTML = `<option value="일반">일반</option>`;
+            pSelect.innerHTML = `<option value="일반행정">일반행정구역</option>`;
         }
-        sync3TierModalSubSelectOnly(topId, midId, subId, preSub);
+        sync4TierProvinceToCity(cntId, provId, ctyId, locId, preCty, preLoc);
     }
 
-    function sync3TierModalSubSelectOnly(topId, midId, subId, preSub = "") {
-        const topVal = document.getElementById(topId).value;
-        const midVal = document.getElementById(midId).value;
-        const subSelect = document.getElementById(subId);
-        subSelect.innerHTML = "";
+    function sync4TierProvinceToCity(cntId, provId, ctyId, locId, preCty="", preLoc="") {
+        const cVal = document.getElementById(cntId).value;
+        const pVal = document.getElementById(provId).value;
+        const ctySelect = document.getElementById(ctyId);
+        ctySelect.innerHTML = "";
 
-        const matchCat = db.categories.find(c => c.name === topVal);
-        if(matchCat) {
-            const matchMid = matchCat.mid.find(m => m.name === midVal);
-            if(matchMid && matchMid.sub.length > 0) {
-                matchMid.sub.forEach(s => {
+        const matchCnt = db.locations.find(l => l.name === cVal);
+        if(matchCnt) {
+            const matchProv = matchCnt.provinces.find(p => p.name === pVal);
+            if(matchProv && matchProv.cities.length > 0) {
+                matchProv.cities.forEach(c => {
                     const opt = document.createElement('option');
-                    opt.value = s; opt.innerText = s;
-                    if(s === preSub) opt.selected = true;
-                    subSelect.appendChild(opt);
+                    opt.value = c.name; opt.innerText = c.name;
+                    if(c.name === preCty) opt.selected = true;
+                    ctySelect.appendChild(opt);
                 });
-                return;
+            } else {
+                ctySelect.innerHTML = `<option value="일반도시">일반도시</option>`;
             }
         }
-        subSelect.innerHTML = `<option value="일반">일반 소분류</option>`;
+        sync4TierCityToLocality(cntId, provId, ctyId, locId, preLoc);
     }
 
-    function deleteRestaurantMaster(id) {
-        if(confirm("해당 식당 가맹점 원천 데이터를 가상 서버에서 삭제합니까?")) {
-            db.restaurants = db.restaurants.filter(r => r.id !== id);
+    function sync4TierCityToLocality(cntId, provId, ctyId, locId, preLoc="") {
+        const cVal = document.getElementById(cntId).value;
+        const pVal = document.getElementById(provId).value;
+        const ctyVal = document.getElementById(ctyId).value;
+        const locSelect = document.getElementById(locId);
+        locSelect.innerHTML = "";
+
+        const matchCnt = db.locations.find(l => l.name === cVal);
+        if(matchCnt) {
+            const matchProv = matchCnt.provinces.find(p => p.name === pVal);
+            if(matchProv) {
+                const matchCty = matchProv.cities.find(c => c.name === ctyVal);
+                if(matchCty && matchCty.localities.length > 0) {
+                    matchCty.localities.forEach(l => {
+                        const opt = document.createElement('option');
+                        opt.value = l; opt.innerText = l;
+                        if(l === preLoc) opt.selected = true;
+                        locSelect.appendChild(opt);
+                    });
+                    return;
+                }
+            }
+        }
+        locSelect.innerHTML = `<option value="일반장소">일반장소</option>`;
+    }
+
+    // [음식 카테고리 CRUD 연동 수정 액션 모듈]
+    function showEditTopCategoryModal(mainIdx) {
+        const target = db.categories[mainIdx];
+        const oldName = target.name;
+        openGlobalModal("대분류 카테고리명 수정", `
+            <input id="modal-input-edit-topcat" type="text" value="${oldName}" class="w-full border p-2 rounded-xl text-sm">
+        `, () => {
+            const newName = document.getElementById('modal-input-edit-topcat').value.trim();
+            if(!newName) return;
+            target.name = newName;
+            db.restaurants.forEach(res => { if (res.topCategory === oldName) res.topCategory = newName; });
+            saveAndRefresh(); closeGlobalModal();
+        });
+    }
+
+    function showEditMidCategoryModal(mainIdx, midIdx) {
+        const targetTop = db.categories[mainIdx];
+        const targetMid = targetTop.mid[midIdx];
+        const oldMidName = targetMid.name;
+        openGlobalModal("중분류 카테고리명 수정", `
+            <input id="modal-input-edit-midcat" type="text" value="${oldMidName}" class="w-full border p-2 rounded-xl text-sm">
+        `, () => {
+            const newMidName = document.getElementById('modal-input-edit-midcat').value.trim();
+            if(!newMidName) return;
+            targetMid.name = newMidName;
+            saveAndRefresh(); closeGlobalModal();
+        });
+    }
+
+    function showCategoryManageModal() {
+        openGlobalModal("대분류 카테고리 추가", `
+            <input id="modal-input-topcat" type="text" placeholder="예: 아시안푸드" class="w-full border p-2 rounded-xl text-sm">
+        `, () => {
+            const val = document.getElementById('modal-input-topcat').value.trim();
+            if(!val) return;
+            db.categories.push({ id: Date.now(), name: val, mid: [] });
+            saveAndRefresh(); closeGlobalModal();
+        });
+    }
+
+    function addMidCategoryDirect(mainIdx) {
+        const midName = prompt(`[${db.categories[mainIdx].name}] 하위에 추가할 중분류명:`);
+        if(midName && midName.trim() !== "") {
+            db.categories[mainIdx].mid.push({ name: midName.trim(), sub: [] });
             saveAndRefresh();
         }
     }
+
+    function addSubCategoryDirect(mainIdx, midIdx) {
+        const subName = prompt(`하위 소분류 기입:`);
+        if(subName && subName.trim() !== "") {
+            db.categories[mainIdx].mid[midIdx].sub.push(subName.trim());
+            saveAndRefresh();
+        }
+    }
+
+    function deleteTopCategoryDirect(mainIdx) { if(confirm("파기하시겠습니까?")) { db.categories.splice(mainIdx, 1); saveAndRefresh(); } }
+    function deleteMidCategoryDirect(mainIdx, midIdx) { if(confirm("삭제하시겠습니까?")) { db.categories[mainIdx].mid.splice(midIdx, 1); saveAndRefresh(); } }
+    function deleteSubCategoryDirect(mainIdx, midIdx, subIdx) { if(confirm("파기합니까?")) { db.categories[mainIdx].mid[midIdx].sub.splice(subIdx, 1); saveAndRefresh(); } }
+
+    // 카테고리 드래그 앤 드롭 모듈
+    let dragSourceIndex = null;
+    function handleCategoryDragStart(e) { dragSourceIndex = this.getAttribute('data-index'); this.classList.add('dragging'); }
+    function handleCategoryDragOver(e) { if (e.preventDefault) e.preventDefault(); return false; }
+    // eslint-disable-next-line no-unused-vars
+    function handleCategoryDragEnd(e) { this.classList.remove('dragging'); }
+    function handleCategoryDrop(e) {
+        if (e.stopPropagation) e.stopPropagation();
+        const targetIndex = this.getAttribute('data-index');
+        if (dragSourceIndex !== null && dragSourceIndex !== targetIndex) {
+            const movedItem = db.categories.splice(dragSourceIndex, 1)[0];
+            db.categories.splice(targetIndex, 0, movedItem);
+            saveAndRefresh();
+        }
+        return false;
+    }
+
+    function deleteRestaurantMaster(id) { if(confirm("삭제합니까?")) { db.restaurants = db.restaurants.filter(r => r.id !== id); saveAndRefresh(); } }
 
     function routeToDetail(id) {
         activeRestaurantId = id;
@@ -839,12 +1055,13 @@
                 ${res.image ? `<img src="${res.image}" class="w-full h-full object-cover">` : '<i class="fa-solid fa-store text-5xl"></i>'}
                 <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
                 <div class="absolute bottom-4 left-4 right-4 text-white">
-                    <span class="bg-orange-500 text-[10px] font-black px-2 py-0.5 rounded-md uppercase">${res.midCategory} > ${res.subCategory}</span>
+                    <span class="bg-orange-500 text-[10px] font-black px-2 py-0.5 rounded-md uppercase">${res.province} ➔ ${res.locality}</span>
                     <h2 class="text-xl font-black mt-1 drop-shadow-md">${res.name}</h2>
                 </div>
             </div>
             <div class="p-4 bg-orange-50/50 border-b">
-                <p class="text-xs text-gray-600 leading-relaxed font-medium"><i class="fa-solid fa-quote-left text-orange-400 text-[10px] mr-1"></i>${res.intro || '매장 한줄 슬로건 공란 상태.'}</p>
+                <p class="text-xs text-gray-600 leading-relaxed font-medium">📍 ${res.country} ${res.province} ${res.city} ${res.locality}</p>
+                <p class="text-xs text-gray-500 leading-relaxed font-medium mt-1"><i class="fa-solid fa-quote-left text-orange-400 text-[10px] mr-1"></i>${res.intro || '매장 한줄 슬로건 공란 상태.'}</p>
             </div>
         `;
         renderMenusSubModule(res);
@@ -867,11 +1084,10 @@
                 <div class="flex justify-between items-center border-b border-gray-200 pb-2 mb-3">
                     <span class="text-xs font-black text-gray-800 flex items-center gap-1">
                         <i class="fa-solid fa-folder text-amber-500"></i> ${category.name}
-                        <span class="text-[10px] font-normal text-gray-400">(${category.items ? category.items.length : 0})</span>
                     </span>
                     <div class="flex gap-1">
-                        <button onclick="showEditMenuCategoryModal(${catIdx})" class="text-[10px] bg-white border border-gray-300 text-gray-600 px-2 py-0.5 rounded font-medium">이름 변경</button>
-                        <button onclick="deleteMenuCategoryDirect(${catIdx})" class="text-[10px] bg-white border border-red-200 text-red-500 px-2 py-0.5 rounded font-medium">삭제</button>
+                        <button onclick="showEditMenuCategoryModal(${catIdx})" class="text-[10px] bg-white border px-2 py-0.5 rounded">수정</button>
+                        <button onclick="deleteMenuCategoryDirect(${catIdx})" class="text-[10px] bg-white text-red-500 border px-2 py-0.5 rounded">삭제</button>
                     </div>
                 </div>
             `;
@@ -883,16 +1099,11 @@
                 category.items.forEach((m, itemIdx) => {
                     itemsListHtml += `
                         <div class="p-2.5 border border-white bg-white rounded-lg flex justify-between items-center gap-3 shadow-sm">
-                            <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                                <div class="w-12 h-12 bg-gray-100 text-xs rounded-md flex items-center justify-center text-gray-300">
-                                    ${m.img ? `<img src="${m.img}" class="w-full h-full object-cover rounded-md">` : '<i class="fa-solid fa-bowl-food"></i>'}
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <p class="font-bold text-xs text-gray-800 truncate">${m.name}</p>
-                                    <p class="text-xs text-theme-orange font-black mt-0.5">${parseInt(m.price).toLocaleString()}원</p>
-                                </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="font-bold text-xs text-gray-800 truncate">${m.name}</p>
+                                <p class="text-xs text-theme-orange font-black mt-0.5">${parseInt(m.price).toLocaleString()}원</p>
                             </div>
-                            <div class="flex gap-1 flex-shrink-0">
+                            <div class="flex gap-1">
                                 <button onclick="showEditMenuModal(${catIdx}, ${itemIdx})" class="text-[10px] border px-2 py-1 bg-gray-50 text-blue-500 rounded">수정</button>
                                 <button onclick="deleteMenuDirect(${catIdx}, ${itemIdx})" class="text-[10px] border px-2 py-1 bg-gray-50 text-red-500 rounded">삭제</button>
                             </div>
@@ -907,56 +1118,35 @@
     }
 
     function showAddMenuCategoryModal() {
-        openGlobalModal("메뉴 그룹 추가", `
-            <input id="modal-input-menucat" type="text" placeholder="예: 메인, 사이드요리" class="w-full border p-2 rounded-xl text-sm">
-        `, () => {
+        openGlobalModal("메뉴 그룹 추가", `<input id="modal-input-menucat" type="text" class="w-full border p-2 rounded-xl text-sm">`, () => {
             const inputVal = document.getElementById('modal-input-menucat').value.trim();
             if(!inputVal) return;
             const res = db.restaurants.find(r => r.id === activeRestaurantId);
-            if(res) {
-                res.menuCategories.push({ name: inputVal, items: [] });
-                saveAndRefresh(); closeGlobalModal();
-            }
+            if(res) { res.menuCategories.push({ name: inputVal, items: [] }); saveAndRefresh(); closeGlobalModal(); }
         });
     }
-
     function showEditMenuCategoryModal(catIdx) {
         const res = db.restaurants.find(r => r.id === activeRestaurantId);
-        const targetCategory = res.menuCategories[catIdx];
-        openGlobalModal("메뉴 그룹명 수정", `
-            <input id="modal-edit-menucat" type="text" value="${targetCategory.name}" class="w-full border p-2 rounded-xl text-sm">
-        `, () => {
+        openGlobalModal("메뉴 그룹명 수정", `<input id="modal-edit-menucat" type="text" value="${res.menuCategories[catIdx].name}" class="w-full border p-2 rounded-xl text-sm">`, () => {
             const inputVal = document.getElementById('modal-edit-menucat').value.trim();
             if(!inputVal) return;
-            targetCategory.name = inputVal;
-            saveAndRefresh(); closeGlobalModal();
+            res.menuCategories[catIdx].name = inputVal; saveAndRefresh(); closeGlobalModal();
         });
     }
-
-    function deleteMenuCategoryDirect(catIdx) {
-        const res = db.restaurants.find(r => r.id === activeRestaurantId);
-        if(confirm("메뉴 그룹을 영구적으로 삭제합니까?")) {
-            res.menuCategories.splice(catIdx, 1);
-            saveAndRefresh();
-        }
-    }
+    function deleteMenuCategoryDirect(catIdx) { const res = db.restaurants.find(r => r.id === activeRestaurantId); if(confirm("삭제합니까?")) { res.menuCategories.splice(catIdx, 1); saveAndRefresh(); } }
 
     function showAddMenuModal() {
         const res = db.restaurants.find(r => r.id === activeRestaurantId);
-        if (!res.menuCategories || res.menuCategories.length === 0) return alert("메뉴 카테고리를 먼저 만들어주세요.");
-
         let catOptions = res.menuCategories.map((c, idx) => `<option value="${idx}">${c.name}</option>`).join('');
-
         openGlobalModal("메뉴 등록", `
             <select id="add-menu-cat-idx" class="w-full border p-2 bg-white text-xs rounded-xl mb-2">${catOptions}</select>
             <input id="add-menu-name" type="text" placeholder="요리명" class="w-full border p-2.5 rounded-xl text-xs mb-2">
-            <input id="add-menu-price" type="number" placeholder="가격(원)" class="w-full border p-2.5 rounded-xl text-xs mb-2">
+            <input id="add-menu-price" type="number" placeholder="가격" class="w-full border p-2.5 rounded-xl text-xs">
         `, () => {
             const catIdx = document.getElementById('add-menu-cat-idx').value;
             const name = document.getElementById('add-menu-name').value.trim();
             const price = parseInt(document.getElementById('add-menu-price').value) || 0;
             if(!name) return;
-
             res.menuCategories[catIdx].items.push({ name, price, desc: "", img: "" });
             saveAndRefresh(); closeGlobalModal();
         });
@@ -965,101 +1155,57 @@
     function showEditMenuModal(catIdx, itemIdx) {
         const res = db.restaurants.find(r => r.id === activeRestaurantId);
         const menu = res.menuCategories[catIdx].items[itemIdx];
-        let catOptions = res.menuCategories.map((c, idx) => `<option value="${idx}" ${idx == catIdx ? 'selected' : ''}>${c.name}</option>`).join('');
-
+        let catOptions = res.menuCategories.map((c, idx) => `<option value="${idx}" ${idx==catIdx?'selected':''}>${c.name}</option>`).join('');
         openGlobalModal("메뉴 편집", `
             <select id="edit-menu-cat-idx" class="w-full border p-2 bg-white text-xs rounded-xl mb-2">${catOptions}</select>
             <input id="edit-menu-name" type="text" value="${menu.name}" class="w-full border p-2.5 rounded-xl text-xs mb-2">
-            <input id="edit-menu-price" type="number" value="${menu.price}" class="w-full border p-2.5 rounded-xl text-xs mb-2">
+            <input id="edit-menu-price" type="number" value="${menu.price}" class="w-full border p-2.5 rounded-xl text-xs">
         `, () => {
             const newCatIdx = parseInt(document.getElementById('edit-menu-cat-idx').value);
             const name = document.getElementById('edit-menu-name').value.trim();
             const price = parseInt(document.getElementById('edit-menu-price').value) || 0;
-
-            const updatedItem = { name, price, desc: menu.desc, img: menu.img };
-            if (newCatIdx === catIdx) {
-                res.menuCategories[catIdx].items[itemIdx] = updatedItem;
-            } else {
-                res.menuCategories[catIdx].items.splice(itemIdx, 1);
-                res.menuCategories[newCatIdx].items.push(updatedItem);
-            }
+            const updated = { name, price, desc: menu.desc, img: menu.img };
+            if(newCatIdx === catIdx) { res.menuCategories[catIdx].items[itemIdx] = updated; }
+            else { res.menuCategories[catIdx].items.splice(itemIdx, 1); res.menuCategories[newCatIdx].items.push(updated); }
             saveAndRefresh(); closeGlobalModal();
         });
     }
-
-    function deleteMenuDirect(catIdx, itemIdx) {
-        if(confirm("해당 메뉴 품목을 리스트에서 제외합니까?")) {
-            const res = db.restaurants.find(r => r.id === activeRestaurantId);
-            res.menuCategories[catIdx].items.splice(itemIdx, 1);
-            saveAndRefresh();
-        }
-    }
+    function deleteMenuDirect(catIdx, itemIdx) { if(confirm("제외합니까?")) { const res = db.restaurants.find(r => r.id === activeRestaurantId); res.menuCategories[catIdx].items.splice(itemIdx, 1); saveAndRefresh(); } }
 
     let localPeopleCount = 2;
-    function updatePeopleCount(change) {
-        localPeopleCount = Math.max(1, localPeopleCount + change);
-        document.getElementById('reserve-people-counter').innerText = localPeopleCount;
-    }
+    function updatePeopleCount(change) { localPeopleCount = Math.max(1, localPeopleCount + change); document.getElementById('reserve-people-counter').innerText = localPeopleCount; }
 
     function triggerReservationSimulation() {
         const res = db.restaurants.find(r => r.id === activeRestaurantId);
         const rDate = document.getElementById('reserve-date').value;
         const rTime = document.getElementById('reserve-time').value;
-
-        if(!rDate) return alert("날짜를 지정해 주세요.");
+        if(!rDate) return alert("날짜를 입력해주세요.");
 
         document.getElementById('restaurant-detail-view').classList.add('hidden');
-        const view = document.getElementById('reservation-status-view');
-        view.classList.remove('hidden');
+        document.getElementById('reservation-status-view').classList.remove('hidden');
         
-        const progressBar = document.getElementById('simulation-progress-bar');
-        const mainText = document.getElementById('status-main-text');
-        const subText = document.getElementById('status-sub-text');
-        const stepInd = document.getElementById('simulation-step-indicator');
-        const homeBtn = document.getElementById('status-home-btn');
-
-        progressBar.style.width = "0%";
-        mainText.innerText = "예약 신청서 송신 중...";
-        stepInd.innerText = "🔑 보안 도메인 소켓 연결망 스캔 중...";
-        homeBtn.classList.add('hidden');
-
         setTimeout(() => {
-            progressBar.style.width = "50%";
-            stepInd.innerText = "🔍 3단계 알고리즘 연동 공석 테이블 매칭 중...";
-        }, 1500);
+            document.getElementById('simulation-progress-bar').style.width = "100%";
+            document.getElementById('status-main-text').innerText = "🎉 예약 시뮬레이션 확정 완료!";
+            document.getElementById('simulation-step-indicator').innerText = "✅ 매칭 성공 (MY 히스토리에 가짜 이력 적재완료)";
+            document.getElementById('status-home-btn').classList.remove('hidden');
 
-        setTimeout(() => {
-            progressBar.style.width = "100%";
-            mainText.innerHTML = `🎉 가짜 예약 시뮬레이션 확정 완료!`;
-            subText.innerHTML = `<span class='text-theme-orange font-black'>※ 목업 엔진 가상 테스트 단계입니다 (실제 예약 아님)</span>`;
-            stepInd.innerText = "✅ 매칭 완료 (MY 히스토리에 가짜 이력 적재완료)";
-            homeBtn.classList.remove('hidden');
-
-            db.reservations.unshift({
-                id: Date.now(), resName: res.name, date: rDate, time: rTime, people: localPeopleCount, timeStampStr: new Date().toLocaleString()
-            });
+            db.reservations.unshift({ id: Date.now(), resName: res.name, date: rDate, time: rTime, people: localPeopleCount });
             saveAndRefresh();
-        }, 3000);
+        }, 1500);
     }
 
     function renderMyReservations() {
         const container = document.getElementById('my-reservation-history');
         container.innerHTML = "";
         if(db.reservations.length === 0) {
-            container.innerHTML = `<div class="text-center py-10 bg-white border rounded-xl text-xs text-gray-400">예약 시뮬레이션 내역이 비어있습니다.</div>`;
+            container.innerHTML = `<div class="text-center py-10 bg-white border rounded-xl text-xs text-gray-400">내역이 비어있습니다.</div>`;
             return;
         }
         db.reservations.forEach(r => {
             const row = document.createElement('div');
             row.className = "bg-white p-4 rounded-xl shadow-sm border border-orange-100 flex flex-col gap-1";
-            row.innerHTML = `
-                <div class="flex justify-between items-center border-b pb-1">
-                    <span class="text-xs font-black text-gray-800">${r.resName}</span>
-                    <span class="text-[10px] bg-green-500 text-white font-bold px-1.5 py-0.5 rounded">테스트확정</span>
-                </div>
-                <p class="text-xs text-gray-600 pt-1">📆 일정: <span class="text-gray-900 font-bold">${r.date} (${r.time})</span></p>
-                <p class="text-xs text-gray-600">👥 인원: <span class="text-gray-900 font-bold">${r.people}명</span></p>
-            `;
+            row.innerHTML = `<div class="flex justify-between items-center border-b pb-1"><span class="text-xs font-black text-gray-800">${r.resName}</span></div><p class="text-xs text-gray-600">📆 일정: ${r.date} (${r.time})</p>`;
             container.appendChild(row);
         });
     }
